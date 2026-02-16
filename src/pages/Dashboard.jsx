@@ -1,7 +1,7 @@
-import { useAuth, ROLES } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
     INTERNOS, CURSOS, SECTORES, INSCRIPCIONES, CERTIFICADOS,
-    CAPACITADORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS
+    CAPACITADORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS, ROLES
 } from '../data/mockData';
 import {
     Users, BookOpen, Building2, Award, TrendingUp,

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, ROLES } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
-    INSCRIPCIONES, INTERNOS, CURSOS, SECTORES, ESTADOS_CURSO, DEMO_USERS
+    INSCRIPCIONES, INTERNOS, CURSOS, SECTORES, ESTADOS_CURSO, DEMO_USERS, ROLES
 } from '../data/mockData';
 import {
     Search, Plus, ClipboardList, Eye, Edit, XCircle, User

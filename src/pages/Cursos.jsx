@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useAuth, ROLES } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
     CURSOS, SECTORES, CAPACITADORES, INSCRIPCIONES, TIPOS_CURSO,
-    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES
+    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, ROLES
 } from '../data/mockData';
 import {
     Plus, Search, BookOpen, CheckCircle, XCircle, Play, Eye

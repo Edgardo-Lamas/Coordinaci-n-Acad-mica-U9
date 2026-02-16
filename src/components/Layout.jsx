@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth, ROLES } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { ROLES } from '../data/mockData';
 import {
     LayoutDashboard, Users, Building2, BookOpen, ClipboardList,
     Award, Shield, Settings, LogOut, Menu, X, GraduationCap,
@@ -19,7 +20,7 @@ const NAV_CONFIG = [
         items: [
             { path: '/internos', label: 'Internos', icon: Users, roles: null },
             { path: '/sectores', label: 'Sectores', icon: Building2, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
-            { path: '/mi-sector', label: 'Mi Sector', icon: Building2, roles: [ROLES.RESPONSABLE] },
+            { path: '/mi-sector', label: 'Mi Sector', icon: Building2, roles: [ROLES.RESPONSABLE, ROLES.CARGADOR] },
             { path: '/cursos', label: 'Cursos', icon: BookOpen, roles: null },
             { path: '/inscripciones', label: 'Inscripciones', icon: ClipboardList, roles: null },
         ]

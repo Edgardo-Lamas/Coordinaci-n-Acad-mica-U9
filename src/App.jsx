@@ -46,7 +46,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="mi-sector" element={
-              <ProtectedRoute roles={[ROLES.RESPONSABLE]}>
+              <ProtectedRoute roles={[ROLES.RESPONSABLE, ROLES.CARGADOR]}>
                 <MiSector />
               </ProtectedRoute>
             } />
