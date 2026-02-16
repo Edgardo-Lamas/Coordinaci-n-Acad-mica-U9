@@ -20,8 +20,8 @@ export function AuthProvider({ children }) {
                 localStorage.removeItem('ga_user');
             }
         } else if (DEV_MODE) {
-            // Auto-login as admin in dev mode
-            const defaultUser = DEMO_USERS.find(u => u.rol === ROLES.ADMIN);
+            // Auto-login as cargador in dev mode to test inscription loading
+            const defaultUser = DEMO_USERS.find(u => u.rol === ROLES.CARGADOR);
             if (defaultUser) {
                 const userData = {
                     id: defaultUser.id,
@@ -30,7 +30,9 @@ export function AuthProvider({ children }) {
                     rol: defaultUser.rol,
                     rolLabel: ROLE_LABELS[defaultUser.rol],
                     sector_id: defaultUser.sector_id,
-                    sectorNombre: null,
+                    sectorNombre: defaultUser.sector_id
+                        ? SECTORES.find(s => s.id === defaultUser.sector_id)?.nombre
+                        : null,
                 };
                 setUser(userData);
                 localStorage.setItem('ga_user', JSON.stringify(userData));

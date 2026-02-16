@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, INTERNOS, CURSOS, INSCRIPCIONES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, CAPACITADORES, DEMO_USERS } from '../data/mockData';
-import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle } from 'lucide-react';
+import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download } from 'lucide-react';
 import { useState } from 'react';
 
 export default function MiSector() {
@@ -61,6 +61,48 @@ export default function MiSector() {
             case 'en_curso': return 'En Curso';
             default: return cal;
         }
+    };
+
+    const handleGenerarCertificado = (insc) => {
+        const curso = CURSOS.find(c => c.id === insc.curso_id);
+        const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
+        
+        if (!interno || !curso) return;
+        
+        // Generar código único de certificado
+        const codigo = `CERT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+        
+        // Simular descarga de certificado (en producción sería PDF con jsPDF)
+        const certificadoTexto = `
+CERTIFICADO DE ASISTENCIA Y APROBACIÓN
+
+Certificamos que ${interno.nombre_completo}
+DNI/Interno: ${insc.interno_nro}
+Ha completado satisfactoriamente el curso:
+
+${curso.nombre}
+
+Tipo: ${curso.tipo}
+Carga Horaria: ${curso.carga_horaria} horas
+Período: ${insc.fecha_inicio_curso || '—'} a ${insc.fecha_fin_curso || '—'}
+Sector: ${sector?.nombre}
+
+Calificación: APROBADO
+Código de Certificado: ${codigo}
+Fecha de Emisión: ${new Date().toLocaleDateString('es-AR')}
+
+---
+Sistema de Gestión Académica - Unidad 9 La Plata
+        `;
+        
+        // Descargar como archivo de texto (en producción sería PDF)
+        const elemento = document.createElement('a');
+        elemento.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(certificadoTexto));
+        elemento.setAttribute('download', `${codigo}_${interno.nombre_completo}.txt`);
+        elemento.style.display = 'none';
+        document.body.appendChild(elemento);
+        elemento.click();
+        document.body.removeChild(elemento);
     };
 
     return (
@@ -208,6 +250,11 @@ export default function MiSector() {
                                     const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
                                     const curso = CURSOS.find(c => c.id === insc.curso_id);
                                     const cargador = DEMO_USERS.find(u => u.id === insc.usuario_cargador_id);
+                                    
+                                    // Determine if certificate can be generated
+                                    const puedeGenerarCertificado = insc.calificacion === 'aprobado' && 
+                                        curso && (curso.estado === ESTADOS_CURSO.APROBADO || curso.estado === ESTADOS_CURSO.FINALIZADO);
+                                    
                                     return (
                                         <tr key={insc.id}>
                                             <td><strong style={{ color: 'var(--primary-700)' }}>#{insc.interno_nro}</strong></td>
@@ -226,12 +273,30 @@ export default function MiSector() {
                                                 <div>{cargador?.nombre.split(' ')[0] || `ID: ${insc.usuario_cargador_id}`}</div>
                                             </td>
                                             <td>
-                                                <button
-                                                    className="btn btn-ghost btn-icon btn-sm"
-                                                    onClick={() => navigate(`/internos/${insc.interno_nro}`)}
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                                    <button
+                                                        className="btn btn-ghost btn-icon btn-sm"
+                                                        onClick={() => navigate(`/internos/${insc.interno_nro}`)}
+                                                        title="Ver ficha del interno"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    {puedeGenerarCertificado && (
+                                                        <button
+                                                            className="btn btn-icon btn-sm"
+                                                            style={{
+                                                                background: 'var(--success)',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            onClick={() => handleGenerarCertificado(insc)}
+                                                            title="Descargar certificado"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
