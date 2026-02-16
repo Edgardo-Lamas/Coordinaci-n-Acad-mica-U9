@@ -9,6 +9,11 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend
+} from 'recharts';
+
 export default function Dashboard() {
     const { user, isAdmin, isCoordinacion, isResponsable } = useAuth();
     const navigate = useNavigate();
@@ -37,6 +42,29 @@ export default function Dashboard() {
         ? Math.round((aprobados / INSCRIPCIONES.length) * 100)
         : 0;
 
+    // Data for Charts
+    const sectorData = SECTORES.map(sector => {
+        const count = INTERNOS.filter(i => i.sector_actual === sector.id && i.estado === 'activo').length;
+        return { name: sector.nombre, value: count };
+    }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+
+    const COLORS = ['#3b69b4', '#00c1ab', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
+
+    // Group inscriptions by month (mock data assumption: fecha_inscripcion exists)
+    const inscripcionesPorMes = INSCRIPCIONES.reduce((acc, curr) => {
+        const date = new Date(curr.fecha_inscripcion);
+        const key = date.toLocaleString('es-AR', { month: 'short' }); // e.g., 'feb'
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Convert to array for Recharts
+    const inscripcionesData = Object.keys(inscripcionesPorMes).map(key => ({
+        name: key.charAt(0).toUpperCase() + key.slice(1),
+        inscripciones: inscripcionesPorMes[key]
+    }));
+
+
     return (
         <div>
             <div className="page-header">
@@ -58,7 +86,7 @@ export default function Dashboard() {
             <div className="stats-grid">
                 {(isAdmin() || isCoordinacion()) && (
                     <>
-                        <div className="stat-card" onClick={() => navigate('/internos')} style={{ cursor: 'pointer' }}>
+                        <div className="stat-card" onClick={() => navigate('/internos')} style={{ cursor: 'pointer', borderTopColor: 'var(--primary-500)' }}>
                             <div className="stat-icon blue">
                                 <Users size={24} />
                             </div>
@@ -69,7 +97,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="stat-card" onClick={() => navigate('/cursos')} style={{ cursor: 'pointer' }}>
+                        <div className="stat-card" onClick={() => navigate('/cursos')} style={{ cursor: 'pointer', borderTopColor: 'var(--accent-500)' }}>
                             <div className="stat-icon teal">
                                 <BookOpen size={24} />
                             </div>
@@ -80,7 +108,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="stat-card" onClick={() => navigate('/sectores')} style={{ cursor: 'pointer' }}>
+                        <div className="stat-card" onClick={() => navigate('/sectores')} style={{ cursor: 'pointer', borderTopColor: '#8b5cf6' }}>
                             <div className="stat-icon purple">
                                 <Building2 size={24} />
                             </div>
@@ -91,7 +119,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="stat-card">
+                        <div className="stat-card" style={{ borderTopColor: 'var(--success)' }}>
                             <div className="stat-icon green">
                                 <Award size={24} />
                             </div>
@@ -102,7 +130,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="stat-card">
+                        <div className="stat-card" style={{ borderTopColor: 'var(--warning)' }}>
                             <div className="stat-icon yellow">
                                 <ClipboardList size={24} />
                             </div>
@@ -114,7 +142,7 @@ export default function Dashboard() {
                         </div>
 
                         {isCoordinacion() && (
-                            <div className="stat-card" style={{ cursor: 'pointer' }}>
+                            <div className="stat-card" style={{ cursor: 'pointer', borderTopColor: 'var(--danger)' }}>
                                 <div className="stat-icon red">
                                     <BookOpen size={24} />
                                 </div>
@@ -130,7 +158,7 @@ export default function Dashboard() {
 
                 {isResponsable() && (
                     <>
-                        <div className="stat-card" onClick={() => navigate('/mi-sector')} style={{ cursor: 'pointer' }}>
+                        <div className="stat-card" onClick={() => navigate('/mi-sector')} style={{ cursor: 'pointer', borderTopColor: 'var(--primary-500)' }}>
                             <div className="stat-icon blue">
                                 <Users size={24} />
                             </div>
@@ -141,7 +169,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="stat-card" onClick={() => navigate('/cursos')} style={{ cursor: 'pointer' }}>
+                        <div className="stat-card" onClick={() => navigate('/cursos')} style={{ cursor: 'pointer', borderTopColor: 'var(--accent-500)' }}>
                             <div className="stat-icon teal">
                                 <BookOpen size={24} />
                             </div>
@@ -152,7 +180,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="stat-card">
+                        <div className="stat-card" style={{ borderTopColor: 'var(--success)' }}>
                             <div className="stat-icon green">
                                 <TrendingUp size={24} />
                             </div>
@@ -165,6 +193,61 @@ export default function Dashboard() {
                     </>
                 )}
             </div>
+
+            {/* Charts Section */}
+            {(isAdmin() || isCoordinacion()) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-8)' }}>
+                    {/* Gráfico de Distribución de Internos */}
+                    <div className="card" style={{ borderTop: '4px solid var(--primary-500)' }}>
+                        <div className="card-header">
+                            <h2 className="card-title">Distribución de Internos</h2>
+                        </div>
+                        <div className="card-body" style={{ height: 300 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={sectorData}
+                                        cx="40%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {sectorData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend layout="vertical" verticalAlign="middle" align="right" />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    {/* Gráfico de Evolución de Inscripciones */}
+                    <div className="card" style={{ borderTop: '4px solid var(--accent-500)' }}>
+                        <div className="card-header">
+                            <h2 className="card-title">Evolución de Inscripciones</h2>
+                        </div>
+                        <div className="card-body" style={{ height: 300 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={inscripcionesData}
+                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                                    <Tooltip cursor={{ fill: '#F3F4F6' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                                    <Bar dataKey="inscripciones" fill="var(--primary-500)" radius={[4, 4, 0, 0]} barSize={40} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Capacitadores Panel (Coordinación) */}
             {(isCoordinacion() || isAdmin()) && (
