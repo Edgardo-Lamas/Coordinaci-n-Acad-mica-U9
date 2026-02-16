@@ -4,13 +4,15 @@
 export const ROLES = {
   ADMIN: 'administrador',
   COORDINACION: 'coordinacion',
-  RESPONSABLE: 'responsable'
+  RESPONSABLE: 'responsable',
+  CARGADOR: 'cargador_datos'
 };
 
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: 'Administrador / Jefatura',
   [ROLES.COORDINACION]: 'Coordinación Académica',
-  [ROLES.RESPONSABLE]: 'Responsable de Sector'
+  [ROLES.RESPONSABLE]: 'Responsable de Sector',
+  [ROLES.CARGADOR]: 'Cargador de Datos (PPL)'
 };
 
 export const SECTORES = [
@@ -27,6 +29,7 @@ export const SECTORES = [
 ];
 
 export const DEMO_USERS = [
+  // Administradores
   {
     id: 1,
     email: 'admin@sistema.gob.ar',
@@ -36,6 +39,7 @@ export const DEMO_USERS = [
     sector_id: null,
     activo: true
   },
+  // Coordinadores académicos
   {
     id: 2,
     email: 'coord1@sistema.gob.ar',
@@ -56,6 +60,16 @@ export const DEMO_USERS = [
   },
   {
     id: 4,
+    email: 'coord3@sistema.gob.ar',
+    password: 'coord123',
+    nombre: 'Patricia Ruiz',
+    rol: ROLES.COORDINACION,
+    sector_id: null,
+    activo: true
+  },
+  // Responsables de sector
+  {
+    id: 5,
     email: 'resp.agora@sistema.gob.ar',
     password: 'resp123',
     nombre: 'Roberto Díaz',
@@ -64,7 +78,7 @@ export const DEMO_USERS = [
     activo: true
   },
   {
-    id: 5,
+    id: 6,
     email: 'resp.ceusta@sistema.gob.ar',
     password: 'resp123',
     nombre: 'Laura Fernández',
@@ -73,12 +87,203 @@ export const DEMO_USERS = [
     activo: true
   },
   {
-    id: 6,
+    id: 7,
     email: 'resp.talleres@sistema.gob.ar',
     password: 'resp123',
     nombre: 'Pedro Martínez',
     rol: ROLES.RESPONSABLE,
     sector_id: 3,
+    activo: true
+  },
+  // Cargadores de datos por sector (2 PPL por sector)
+  // AGORA (Sector 1)
+  {
+    id: 8,
+    email: 'carga.agora.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Juan Carlos Vera',
+    rol: ROLES.CARGADOR,
+    sector_id: 1,
+    activo: true
+  },
+  {
+    id: 9,
+    email: 'carga.agora.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Miguel Ángel González',
+    rol: ROLES.CARGADOR,
+    sector_id: 1,
+    activo: true
+  },
+  // CEUSTA (Sector 2)
+  {
+    id: 10,
+    email: 'carga.ceusta.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Sebastián López',
+    rol: ROLES.CARGADOR,
+    sector_id: 2,
+    activo: true
+  },
+  {
+    id: 11,
+    email: 'carga.ceusta.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Fernando Romero',
+    rol: ROLES.CARGADOR,
+    sector_id: 2,
+    activo: true
+  },
+  // TALLERES 404 (Sector 3)
+  {
+    id: 12,
+    email: 'carga.talleres.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Matías García',
+    rol: ROLES.CARGADOR,
+    sector_id: 3,
+    activo: true
+  },
+  {
+    id: 13,
+    email: 'carga.talleres.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Ricardo Flores',
+    rol: ROLES.CARGADOR,
+    sector_id: 3,
+    activo: true
+  },
+  // PABELLÓN IGLESIA (Sector 4)
+  {
+    id: 14,
+    email: 'carga.iglesia.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Daniel Muñoz',
+    rol: ROLES.CARGADOR,
+    sector_id: 4,
+    activo: true
+  },
+  {
+    id: 15,
+    email: 'carga.iglesia.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Gustavo Sánchez',
+    rol: ROLES.CARGADOR,
+    sector_id: 4,
+    activo: true
+  },
+  // COM. EDUCATIVA JUANA MANSO (Sector 5)
+  {
+    id: 16,
+    email: 'carga.manso.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Alejandro Ponce',
+    rol: ROLES.CARGADOR,
+    sector_id: 5,
+    activo: true
+  },
+  {
+    id: 17,
+    email: 'carga.manso.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Oscar Castillo',
+    rol: ROLES.CARGADOR,
+    sector_id: 5,
+    activo: true
+  },
+  // CENTRO CULTURAL FREIRE (Sector 6)
+  {
+    id: 18,
+    email: 'carga.freire.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Lucas Martín',
+    rol: ROLES.CARGADOR,
+    sector_id: 6,
+    activo: true
+  },
+  {
+    id: 19,
+    email: 'carga.freire.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Andrés Vasquez',
+    rol: ROLES.CARGADOR,
+    sector_id: 6,
+    activo: true
+  },
+  // COMITÉ POR LA TORTURA (Sector 7)
+  {
+    id: 20,
+    email: 'carga.tortura.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Javier Quintero',
+    rol: ROLES.CARGADOR,
+    sector_id: 7,
+    activo: true
+  },
+  {
+    id: 21,
+    email: 'carga.tortura.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Felipe Navarro',
+    rol: ROLES.CARGADOR,
+    sector_id: 7,
+    activo: true
+  },
+  // SANIDAD (Sector 8)
+  {
+    id: 22,
+    email: 'carga.sanidad.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Claudio Rioja',
+    rol: ROLES.CARGADOR,
+    sector_id: 8,
+    activo: true
+  },
+  {
+    id: 23,
+    email: 'carga.sanidad.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Roberto Salazar',
+    rol: ROLES.CARGADOR,
+    sector_id: 8,
+    activo: true
+  },
+  // RESERVA 1 (Sector 9)
+  {
+    id: 24,
+    email: 'carga.reserva1.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Marcelo Bravo',
+    rol: ROLES.CARGADOR,
+    sector_id: 9,
+    activo: true
+  },
+  {
+    id: 25,
+    email: 'carga.reserva1.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Héctor Fuentes',
+    rol: ROLES.CARGADOR,
+    sector_id: 9,
+    activo: true
+  },
+  // RESERVA 2 (Sector 10)
+  {
+    id: 26,
+    email: 'carga.reserva2.1@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Víctor Manuel Díaz',
+    rol: ROLES.CARGADOR,
+    sector_id: 10,
+    activo: true
+  },
+  {
+    id: 27,
+    email: 'carga.reserva2.2@sistema.gob.ar',
+    password: 'carga123',
+    nombre: 'Raúl Escobar',
+    rol: ROLES.CARGADOR,
+    sector_id: 10,
     activo: true
   },
 ];
@@ -232,16 +437,16 @@ export const CURSOS = [
   },
 ];
 
-// Generate inscriptions
+// Generate inscriptions with audit trail
 export const INSCRIPCIONES = [
-  { id: 1, interno_nro: INTERNOS[0].numero_interno, curso_id: 1, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-03-01' },
-  { id: 2, interno_nro: INTERNOS[1].numero_interno, curso_id: 2, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-03-15' },
-  { id: 3, interno_nro: INTERNOS[2].numero_interno, curso_id: 1, calificacion: 'en_curso', observaciones: 'Buen desempeño', fecha_inscripcion: '2025-03-01' },
-  { id: 4, interno_nro: INTERNOS[3].numero_interno, curso_id: 3, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-02-01' },
-  { id: 5, interno_nro: INTERNOS[0].numero_interno, curso_id: 5, calificacion: 'aprobado', observaciones: 'Excelente rendimiento', fecha_inscripcion: '2025-01-15' },
-  { id: 6, interno_nro: INTERNOS[4].numero_interno, curso_id: 2, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-03-15' },
-  { id: 7, interno_nro: INTERNOS[5].numero_interno, curso_id: 3, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-02-01' },
-  { id: 8, interno_nro: INTERNOS[6].numero_interno, curso_id: 1, calificacion: 'desaprobado', observaciones: 'Abandonó', fecha_inscripcion: '2025-03-01' },
+  { id: 1, interno_nro: INTERNOS[0].numero_interno, curso_id: 1, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-03-01', fecha_inicio_curso: '2025-03-01', fecha_fin_curso: '2025-06-30', usuario_cargador_id: 8, fecha_carga: '2025-03-01T10:30:00' },
+  { id: 2, interno_nro: INTERNOS[1].numero_interno, curso_id: 2, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-03-15', fecha_inicio_curso: '2025-03-15', fecha_fin_curso: '2025-07-15', usuario_cargador_id: 10, fecha_carga: '2025-03-15T09:45:00' },
+  { id: 3, interno_nro: INTERNOS[2].numero_interno, curso_id: 1, calificacion: 'en_curso', observaciones: 'Buen desempeño', fecha_inscripcion: '2025-03-01', fecha_inicio_curso: '2025-03-01', fecha_fin_curso: '2025-06-30', usuario_cargador_id: 9, fecha_carga: '2025-03-01T11:15:00' },
+  { id: 4, interno_nro: INTERNOS[3].numero_interno, curso_id: 3, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-02-01', fecha_inicio_curso: '2025-02-01', fecha_fin_curso: '2025-08-31', usuario_cargador_id: 12, fecha_carga: '2025-02-01T08:30:00' },
+  { id: 5, interno_nro: INTERNOS[0].numero_interno, curso_id: 5, calificacion: 'aprobado', observaciones: 'Excelente rendimiento', fecha_inscripcion: '2025-01-15', fecha_inicio_curso: '2025-01-15', fecha_fin_curso: '2025-04-15', usuario_cargador_id: 8, fecha_carga: '2025-01-15T14:20:00' },
+  { id: 6, interno_nro: INTERNOS[4].numero_interno, curso_id: 2, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-03-15', fecha_inicio_curso: '2025-03-15', fecha_fin_curso: '2025-07-15', usuario_cargador_id: 10, fecha_carga: '2025-03-15T10:00:00' },
+  { id: 7, interno_nro: INTERNOS[5].numero_interno, curso_id: 3, calificacion: 'en_curso', observaciones: '', fecha_inscripcion: '2025-02-01', fecha_inicio_curso: '2025-02-01', fecha_fin_curso: '2025-08-31', usuario_cargador_id: 13, fecha_carga: '2025-02-01T09:30:00' },
+  { id: 8, interno_nro: INTERNOS[6].numero_interno, curso_id: 1, calificacion: 'desaprobado', observaciones: 'Abandonó', fecha_inscripcion: '2025-03-01', fecha_inicio_curso: '2025-03-01', fecha_fin_curso: '2025-06-30', usuario_cargador_id: 8, fecha_carga: '2025-03-01T10:45:00' },
 ];
 
 export const CERTIFICADOS = [
@@ -259,6 +464,10 @@ export const AUDIT_LOG = [
   { id: 1, usuario_id: 1, accion: 'LOGIN', entidad: 'usuarios', detalle: 'Inicio de sesión exitoso', fecha: '2025-02-14T10:00:00', ip: '192.168.1.1' },
   { id: 2, usuario_id: 2, accion: 'CREAR_CURSO', entidad: 'cursos', detalle: 'Creó curso "Electricidad Básica"', fecha: '2025-02-14T10:15:00', ip: '192.168.1.2' },
   { id: 3, usuario_id: 2, accion: 'APROBAR_CURSO', entidad: 'cursos', detalle: 'Aprobó curso "Electricidad Básica"', fecha: '2025-02-14T10:30:00', ip: '192.168.1.2' },
-  { id: 4, usuario_id: 4, accion: 'INSCRIBIR', entidad: 'inscripciones', detalle: 'Inscribió interno #130000 en "Electricidad Básica"', fecha: '2025-03-01T09:00:00', ip: '192.168.1.5' },
+  { id: 4, usuario_id: 8, accion: 'CARGAR_INSCRIPCION', entidad: 'inscripciones', detalle: 'Cargó inscripción: interno #130000 en "Electricidad Básica"', fecha: '2025-03-01T10:30:00', ip: '192.168.1.50' },
   { id: 5, usuario_id: 2, accion: 'EMITIR_CERTIFICADO', entidad: 'certificados', detalle: 'Emitió certificado CERT-2025-0001', fecha: '2025-04-20T14:00:00', ip: '192.168.1.2' },
+  { id: 6, usuario_id: 10, accion: 'CARGAR_INSCRIPCION', entidad: 'inscripciones', detalle: 'Cargó inscripción: interno #130200 en "Alfabetización Digital"', fecha: '2025-03-15T09:45:00', ip: '192.168.1.51' },
+  { id: 7, usuario_id: 9, accion: 'CARGAR_INSCRIPCION', entidad: 'inscripciones', detalle: 'Cargó inscripción: interno #130400 en "Electricidad Básica"', fecha: '2025-03-01T11:15:00', ip: '192.168.1.52' },
+  { id: 8, usuario_id: 4, accion: 'REVISAR_INSCRIPCIONES', entidad: 'inscripciones', detalle: 'Reviewed inscriptions cargadas en sector AGORA', fecha: '2025-03-01T15:00:00', ip: '192.168.1.55' },
+  { id: 9, usuario_id: 2, accion: 'REVISAR_INSCRIPCIONES', entidad: 'inscripciones', detalle: 'Reviewed todas las inscripciones de la coordinación', fecha: '2025-03-02T10:00:00', ip: '192.168.1.2' },
 ];

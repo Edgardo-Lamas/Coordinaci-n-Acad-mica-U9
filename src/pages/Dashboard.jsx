@@ -1,11 +1,11 @@
 import { useAuth, ROLES } from '../contexts/AuthContext';
 import {
     INTERNOS, CURSOS, SECTORES, INSCRIPCIONES, CERTIFICADOS,
-    CAPACITADORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS
+    CAPACITADORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS
 } from '../data/mockData';
 import {
     Users, BookOpen, Building2, Award, TrendingUp,
-    ClipboardList, UserCheck, GraduationCap, Plus
+    ClipboardList, UserCheck, GraduationCap, Plus, Activity
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -267,6 +267,75 @@ export default function Dashboard() {
                     </table>
                 </div>
             </div>
+
+            {/* Inscripciones Recientes - Coordinación */}
+            {(isCoordinacion() || isAdmin()) && (
+                <div className="card" style={{ marginTop: 'var(--space-6)' }}>
+                    <div className="card-header">
+                        <h2 className="card-title">
+                            <Activity size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+                            Inscripciones Recientes por Sector
+                        </h2>
+                        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/inscripciones')}>
+                            Ver todas
+                        </button>
+                    </div>
+                    <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Interno</th>
+                                    <th>Curso / Sector</th>
+                                    <th>Cargado por</th>
+                                    <th>Fecha Carga</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {INSCRIPCIONES
+                                    .sort((a, b) => new Date(b.fecha_carga || 0) - new Date(a.fecha_carga || 0))
+                                    .slice(0, 8)
+                                    .map(insc => {
+                                        const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
+                                        const curso = CURSOS.find(c => c.id === insc.curso_id);
+                                        const sector = curso ? SECTORES.find(s => s.id === curso.sector_id) : null;
+                                        const cargador = DEMO_USERS.find(u => u.id === insc.usuario_cargador_id);
+                                        const calificacionBadge = insc.calificacion === 'aprobado' ? 'badge-success' :
+                                            insc.calificacion === 'desaprobado' ? 'badge-danger' : 'badge-info';
+                                        return (
+                                            <tr key={insc.id}>
+                                                <td>
+                                                    <strong style={{ color: 'var(--primary-700)' }}>#{insc.interno_nro}</strong>
+                                                </td>
+                                                <td style={{ fontSize: 'var(--text-xs)' }}>
+                                                    <div style={{ fontWeight: 500 }}>{curso?.nombre || '—'}</div>
+                                                    <div style={{ color: 'var(--gray-500)' }}>{sector?.nombre || '—'}</div>
+                                                </td>
+                                                <td style={{ fontSize: 'var(--text-xs)' }}>
+                                                    <div>{cargador?.nombre.split(' ')[0] || `ID: ${insc.usuario_cargador_id}`}</div>
+                                                    <div style={{ color: 'var(--gray-500)' }}>({cargador?.rol === 'cargador_datos' ? 'PPL' : cargador?.rol})</div>
+                                                </td>
+                                                <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+                                                    {insc.fecha_carga ? new Date(insc.fecha_carga).toLocaleString('es-AR', {
+                                                        day: '2-digit', month: '2-digit', year: '2-digit',
+                                                        hour: '2-digit', minute: '2-digit'
+                                                    }) : '—'}
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${calificacionBadge}`}>
+                                                        {insc.calificacion === 'aprobado' ? 'Aprobado' :
+                                                            insc.calificacion === 'desaprobado' ? 'Desaprobado' : 'En Curso'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -3,6 +3,9 @@ import { DEMO_USERS, ROLES, ROLE_LABELS, SECTORES } from '../data/mockData';
 
 const AuthContext = createContext(null);
 
+// DEV MODE: Set to false to enable authentication requirement
+const DEV_MODE = true;
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -15,6 +18,22 @@ export function AuthProvider({ children }) {
                 setUser(JSON.parse(savedUser));
             } catch (e) {
                 localStorage.removeItem('ga_user');
+            }
+        } else if (DEV_MODE) {
+            // Auto-login as admin in dev mode
+            const defaultUser = DEMO_USERS.find(u => u.rol === ROLES.ADMIN);
+            if (defaultUser) {
+                const userData = {
+                    id: defaultUser.id,
+                    email: defaultUser.email,
+                    nombre: defaultUser.nombre,
+                    rol: defaultUser.rol,
+                    rolLabel: ROLE_LABELS[defaultUser.rol],
+                    sector_id: defaultUser.sector_id,
+                    sectorNombre: null,
+                };
+                setUser(userData);
+                localStorage.setItem('ga_user', JSON.stringify(userData));
             }
         }
         setLoading(false);
@@ -55,6 +74,7 @@ export function AuthProvider({ children }) {
     const isAdmin = () => user?.rol === ROLES.ADMIN;
     const isCoordinacion = () => user?.rol === ROLES.COORDINACION;
     const isResponsable = () => user?.rol === ROLES.RESPONSABLE;
+    const isCargador = () => user?.rol === ROLES.CARGADOR;
 
     const canAccess = (requiredRoles) => {
         if (!user) return false;
@@ -71,6 +91,7 @@ export function AuthProvider({ children }) {
             isAdmin,
             isCoordinacion,
             isResponsable,
+            isCargador,
             canAccess,
         }}>
             {children}
