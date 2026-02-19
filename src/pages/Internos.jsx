@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { INTERNOS, SECTORES } from '../data/mockData';
+import { SECTORES } from '../data/mockData';
+import { getInternos } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
     Search, Plus, ChevronLeft, ChevronRight, Eye, Edit, User
@@ -18,11 +19,14 @@ export default function Internos() {
     const [filterEstado, setFilterEstado] = useState('');
     const [page, setPage] = useState(1);
 
+    const internos = getInternos();
+
     const filtered = useMemo(() => {
-        return INTERNOS.filter(interno => {
+        return internos.filter(interno => {
             const matchSearch = !search ||
                 interno.nombre_completo.toLowerCase().includes(search.toLowerCase()) ||
-                interno.numero_interno.includes(search);
+                interno.numero_interno.includes(search) ||
+                (interno.dni && interno.dni.includes(search));
             const matchSector = !filterSector ||
                 String(interno.sector_actual) === filterSector;
             const matchEstado = !filterEstado ||
@@ -58,7 +62,7 @@ export default function Internos() {
                         <Search className="search-icon" size={18} />
                         <input
                             type="text"
-                            placeholder="Buscar por nombre o Nº de interno..."
+                            placeholder="Buscar por nombre, Nº de interno o DNI..."
                             value={search}
                             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                         />
@@ -96,8 +100,8 @@ export default function Internos() {
                         <tr>
                             <th>Nº Interno</th>
                             <th>Nombre Completo</th>
+                            <th>DNI</th>
                             <th>Sector</th>
-                            <th>Fecha Ingreso</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -127,8 +131,10 @@ export default function Internos() {
                                             <span style={{ fontWeight: 500 }}>{interno.nombre_completo}</span>
                                         </div>
                                     </td>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 'var(--text-sm)' }}>
+                                        {interno.dni || <span style={{ color: 'var(--gray-300)' }}>—</span>}
+                                    </td>
                                     <td>{sector?.nombre || '—'}</td>
-                                    <td>{new Date(interno.fecha_ingreso).toLocaleDateString('es-AR')}</td>
                                     <td>
                                         <span className={`badge ${interno.estado === 'activo' ? 'badge-success' : 'badge-danger'}`}>
                                             {interno.estado === 'activo' ? 'Activo' : 'Inactivo'}

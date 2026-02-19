@@ -1,10 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { SECTORES, INTERNOS, CURSOS, INSCRIPCIONES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, CAPACITADORES, DEMO_USERS } from '../data/mockData';
+import { SECTORES, CURSOS, INSCRIPCIONES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, CAPACITADORES, DEMO_USERS } from '../data/mockData';
+import { getInternos } from '../data/dataService';
 import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download } from 'lucide-react';
+import SearchableSelect from '../components/SearchableSelect';
 import { useState } from 'react';
 
 export default function MiSector() {
+    const INTERNOS = getInternos();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('internos');
@@ -24,7 +27,7 @@ export default function MiSector() {
         c.estado === ESTADOS_CURSO.EN_CURSO || c.estado === ESTADOS_CURSO.APROBADO
     );
 
-    const internosDisponibles = sectorInternos;
+    const internosDisponibles = INTERNOS.filter(i => i.estado === 'activo');
 
     const handleCreateInscripcion = (e) => {
         e.preventDefault();
@@ -66,12 +69,12 @@ export default function MiSector() {
     const handleGenerarCertificado = (insc) => {
         const curso = CURSOS.find(c => c.id === insc.curso_id);
         const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
-        
+
         if (!interno || !curso) return;
-        
+
         // Generar código único de certificado
         const codigo = `CERT-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-        
+
         // Simular descarga de certificado (en producción sería PDF con jsPDF)
         const certificadoTexto = `
 CERTIFICADO DE ASISTENCIA Y APROBACIÓN
@@ -94,7 +97,7 @@ Fecha de Emisión: ${new Date().toLocaleDateString('es-AR')}
 ---
 Sistema de Gestión Académica - Unidad 9 La Plata
         `;
-        
+
         // Descargar como archivo de texto (en producción sería PDF)
         const elemento = document.createElement('a');
         elemento.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(certificadoTexto));
@@ -250,18 +253,18 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                                     const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
                                     const curso = CURSOS.find(c => c.id === insc.curso_id);
                                     const cargador = DEMO_USERS.find(u => u.id === insc.usuario_cargador_id);
-                                    
+
                                     // Determine if certificate can be generated
-                                    const puedeGenerarCertificado = insc.calificacion === 'aprobado' && 
+                                    const puedeGenerarCertificado = insc.calificacion === 'aprobado' &&
                                         curso && (curso.estado === ESTADOS_CURSO.APROBADO || curso.estado === ESTADOS_CURSO.FINALIZADO);
-                                    
+
                                     return (
                                         <tr key={insc.id}>
                                             <td><strong style={{ color: 'var(--primary-700)' }}>#{insc.interno_nro}</strong></td>
                                             <td style={{ fontWeight: 500, fontSize: 'var(--text-sm)' }}>{interno?.nombre_completo || '—'}</td>
                                             <td style={{ fontSize: 'var(--text-sm)' }}>{curso?.nombre || '—'}</td>
                                             <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                                                {insc.fecha_inicio_curso ? new Date(insc.fecha_inicio_curso).toLocaleDateString('es-AR') : '—'} 
+                                                {insc.fecha_inicio_curso ? new Date(insc.fecha_inicio_curso).toLocaleDateString('es-AR') : '—'}
                                                 {insc.fecha_fin_curso ? ' → ' + new Date(insc.fecha_fin_curso).toLocaleDateString('es-AR') : ''}
                                             </td>
                                             <td>
@@ -330,15 +333,17 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                                 </p>
                                 <div className="form-group">
                                     <label className="form-label">Interno *</label>
-                                    <select className="form-select" required value={newInsc.interno_nro}
-                                        onChange={e => setNewInsc({ ...newInsc, interno_nro: e.target.value })}>
-                                        <option value="">Seleccionar interno...</option>
-                                        {internosDisponibles.map(i => (
-                                            <option key={i.numero_interno} value={i.numero_interno}>
-                                                #{i.numero_interno} — {i.nombre_completo}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <SearchableSelect
+                                        options={internosDisponibles.map(i => ({
+                                            value: i.numero_interno,
+                                            label: `#${i.numero_interno} — ${i.nombre_completo}`,
+                                            sublabel: i.dni ? `DNI ${i.dni}` : null
+                                        }))}
+                                        value={newInsc.interno_nro}
+                                        onChange={val => setNewInsc({ ...newInsc, interno_nro: val })}
+                                        placeholder="Escribí nombre o Nº de interno..."
+                                        required
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Curso *</label>

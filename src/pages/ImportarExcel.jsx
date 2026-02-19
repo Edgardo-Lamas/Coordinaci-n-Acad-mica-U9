@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download, Trash2, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount } from '../data/dataService';
 
 export default function ImportarExcel() {
     const [file, setFile] = useState(null);
@@ -9,7 +11,9 @@ export default function ImportarExcel() {
     const [result, setResult] = useState(null);
     const [errors, setErrors] = useState([]);
     const [dragover, setDragover] = useState(false);
+    const [hasData, setHasData] = useState(hasImportedData());
     const fileRef = useRef(null);
+    const navigate = useNavigate();
 
     const processFile = (selectedFile) => {
         setFile(selectedFile);
@@ -53,14 +57,26 @@ export default function ImportarExcel() {
                     }
                 }
 
+                // Look for DNI column
+                let dniColumn = null;
+                for (const h of headers) {
+                    const lower = h.toLowerCase().trim();
+                    if (lower.includes('dni') || lower.includes('documento') || lower.includes('doc') || lower === 'cuit' || lower === 'cuil') {
+                        dniColumn = h;
+                        break;
+                    }
+                }
+
                 const previewData = {
                     totalRows: jsonData.length,
                     headers,
                     idColumn,
                     nameColumn,
+                    dniColumn,
                     sampleRows: jsonData.slice(0, 10).map(row => ({
                         id: idColumn ? String(row[idColumn]).trim() : '',
                         nombre: nameColumn ? String(row[nameColumn]).trim() : '',
+                        dni: dniColumn ? String(row[dniColumn]).trim() : '',
                         raw: row
                     })),
                     allRows: jsonData
@@ -85,32 +101,30 @@ export default function ImportarExcel() {
         if (!preview) return;
         setImporting(true);
 
-        // Simulate import process
+        // Small delay for UX feedback
         setTimeout(() => {
-            const importErrors = [];
-            let imported = 0;
-            let skipped = 0;
-
-            preview.allRows.forEach((row, index) => {
-                const id = preview.idColumn ? String(row[preview.idColumn]).trim() : '';
-                const nombre = preview.nameColumn ? String(row[preview.nameColumn]).trim() : '';
-
-                if (!id || !nombre) {
-                    importErrors.push(`Fila ${index + 2}: Datos incompletos (ID: "${id}", Nombre: "${nombre}")`);
-                    skipped++;
-                } else {
-                    imported++;
-                }
-            });
-
-            setResult({
-                total: preview.allRows.length,
-                imported,
-                skipped,
-                errors: importErrors.slice(0, 10) // Show first 10 errors
-            });
+            try {
+                const importResult = importInternosFromExcel(
+                    preview.allRows,
+                    preview.idColumn,
+                    preview.nameColumn,
+                    preview.dniColumn
+                );
+                setResult(importResult);
+                setHasData(true);
+            } catch (err) {
+                setErrors([err.message]);
+            }
             setImporting(false);
-        }, 1500);
+        }, 800);
+    };
+
+    const handleClearData = () => {
+        if (window.confirm('¿Está seguro de eliminar todos los datos importados? Se volverá a los datos de demostración.')) {
+            clearImportedInternos();
+            setHasData(false);
+            setResult(null);
+        }
     };
 
     const resetForm = () => {
@@ -126,10 +140,30 @@ export default function ImportarExcel() {
                 <div>
                     <h1 className="page-title">Importar Internos desde Excel</h1>
                     <p className="page-description">
-                        Carga masiva de internos. Solo se importan <strong>Apellido y Nombre</strong> y <strong>Nº ID</strong>.
+                        Carga masiva de internos. Se importan <strong>Nº ID</strong>, <strong>Apellido y Nombre</strong> y <strong>DNI</strong>.
                     </p>
                 </div>
             </div>
+
+            {/* Existing data banner */}
+            {hasData && !result && !preview && (
+                <div className="card" style={{ marginBottom: 'var(--space-4)', borderLeft: '4px solid var(--success)' }}>
+                    <div className="card-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <Users size={20} style={{ color: 'var(--success)' }} />
+                            <span><strong>{getInternosCount()}</strong> internos activos cargados desde archivo Excel</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => navigate('/internos')}>
+                                <Users size={16} /> Ver Internos
+                            </button>
+                            <button className="btn btn-ghost btn-sm" onClick={handleClearData} style={{ color: 'var(--danger)' }}>
+                                <Trash2 size={16} /> Limpiar datos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Result */}
             {result && (
@@ -137,8 +171,11 @@ export default function ImportarExcel() {
                     <div className="card-body" style={{ textAlign: 'center' }}>
                         <CheckCircle size={48} style={{ color: 'var(--success)', marginBottom: 16 }} />
                         <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 8 }}>
-                            Importación Completada
+                            Importación Completada — Datos Guardados
                         </h3>
+                        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginBottom: 'var(--space-4)' }}>
+                            Los datos fueron guardados correctamente y persistirán al recargar la página.
+                        </p>
                         <div style={{ display: 'flex', gap: 'var(--space-6)', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
                             <div>
                                 <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--success)' }}>{result.imported}</div>
@@ -167,9 +204,14 @@ export default function ImportarExcel() {
                             </div>
                         )}
 
-                        <button className="btn btn-primary" onClick={resetForm} style={{ marginTop: 'var(--space-4)' }}>
-                            Importar otro archivo
-                        </button>
+                        <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', marginTop: 'var(--space-4)' }}>
+                            <button className="btn btn-primary" onClick={() => navigate('/internos')}>
+                                <Users size={18} /> Ver Internos
+                            </button>
+                            <button className="btn btn-secondary" onClick={resetForm}>
+                                Importar otro archivo
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -190,13 +232,13 @@ export default function ImportarExcel() {
                                 Arrastrá tu archivo Excel aquí o hacé clic para seleccionarlo
                             </div>
                             <div className="upload-hint">
-                                Formatos aceptados: .xlsx, .xls — Se importarán solo las columnas Nombre y Nº ID
+                                Formatos aceptados: .xlsx, .xls, .csv — Se importarán las columnas Nº ID, Nombre y DNI
                             </div>
                         </div>
                         <input
                             ref={fileRef}
                             type="file"
-                            accept=".xlsx,.xls"
+                            accept=".xlsx,.xls,.csv"
                             style={{ display: 'none' }}
                             onChange={(e) => {
                                 const f = e.target.files[0];
@@ -248,6 +290,9 @@ export default function ImportarExcel() {
                                 <div style={{ padding: 'var(--space-3) var(--space-4)', background: preview.nameColumn ? 'var(--success-light)' : 'var(--danger-light)', borderRadius: 'var(--radius-sm)' }}>
                                     <strong>Nombre:</strong> {preview.nameColumn || '❌ No detectada'}
                                 </div>
+                                <div style={{ padding: 'var(--space-3) var(--space-4)', background: preview.dniColumn ? 'var(--success-light)' : 'var(--warning-light)', borderRadius: 'var(--radius-sm)' }}>
+                                    <strong>DNI:</strong> {preview.dniColumn || '⚠️ No detectada (opcional)'}
+                                </div>
                             </div>
                         </div>
 
@@ -261,6 +306,7 @@ export default function ImportarExcel() {
                                     <tr>
                                         <th>#</th>
                                         <th>Nº ID</th>
+                                        <th>DNI</th>
                                         <th>Apellido y Nombre</th>
                                     </tr>
                                 </thead>
@@ -272,6 +318,9 @@ export default function ImportarExcel() {
                                                 <strong style={{ color: 'var(--primary-700)' }}>
                                                     {row.id || <span style={{ color: 'var(--danger)' }}>—</span>}
                                                 </strong>
+                                            </td>
+                                            <td style={{ fontFamily: 'monospace', fontSize: 'var(--text-sm)' }}>
+                                                {row.dni || <span style={{ color: 'var(--gray-300)' }}>—</span>}
                                             </td>
                                             <td>{row.nombre || <span style={{ color: 'var(--danger)' }}>—</span>}</td>
                                         </tr>
@@ -318,7 +367,7 @@ export default function ImportarExcel() {
                             <div>
                                 <strong>Preparar el archivo Excel</strong>
                                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
-                                    El archivo debe contener al menos dos columnas: <strong>Nº ID</strong> (número de interno) y <strong>Apellidos y Nombres</strong>. Las demás columnas serán ignoradas.
+                                    El archivo debe contener al menos dos columnas: <strong>Nº ID</strong> (número de interno), <strong>Apellidos y Nombres</strong>, y opcionalmente <strong>DNI</strong>. El DNI se usará para certificados y búsquedas.
                                 </p>
                             </div>
                         </div>

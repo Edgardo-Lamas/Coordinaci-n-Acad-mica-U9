@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    INSCRIPCIONES, INTERNOS, CURSOS, SECTORES, ESTADOS_CURSO, DEMO_USERS, ROLES
+    INSCRIPCIONES, CURSOS, SECTORES, ESTADOS_CURSO, DEMO_USERS, ROLES
 } from '../data/mockData';
+import { getInternos } from '../data/dataService';
 import {
     Search, Plus, ClipboardList, Eye, Edit, XCircle, User
 } from 'lucide-react';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function Inscripciones() {
+    const INTERNOS = getInternos();
     const { user, isResponsable, isCoordinacion, isAdmin, isCargador } = useAuth();
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
@@ -51,14 +54,14 @@ export default function Inscripciones() {
             insc.curso?.nombre?.toLowerCase().includes(search.toLowerCase());
         const matchCalif = !filterCalificacion || insc.calificacion === filterCalificacion;
         const matchSector = !filterSector || String(insc.curso?.sector_id) === filterSector;
-        
+
         // PERMISSION LOGIC
         let hasAccess = true;
         if (isResponsable() || isCargador()) {
             hasAccess = insc.curso?.sector_id === user.sector_id;
         }
         // Admin y coordinación ven todo
-        
+
         return matchSearch && matchCalif && matchSector && hasAccess;
     });
 
@@ -105,9 +108,9 @@ export default function Inscripciones() {
         });
 
     // Sectores disponibles según el rol
-    const sectoresDisponibles = !filterSector && !isResponsable() && !isCargador() 
-        ? SECTORES 
-        : isResponsable() || isCargador() 
+    const sectoresDisponibles = !filterSector && !isResponsable() && !isCargador()
+        ? SECTORES
+        : isResponsable() || isCargador()
             ? SECTORES.filter(s => s.id === user.sector_id)
             : SECTORES;
 
@@ -182,7 +185,7 @@ export default function Inscripciones() {
                                 <td style={{ fontWeight: 500, fontSize: 'var(--text-sm)' }}>{insc.interno?.nombre_completo || '—'}</td>
                                 <td style={{ fontSize: 'var(--text-sm)' }}>{insc.curso?.nombre || '—'}</td>
                                 <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                                    {insc.fecha_inicio_curso ? new Date(insc.fecha_inicio_curso).toLocaleDateString('es-AR') : '—'} 
+                                    {insc.fecha_inicio_curso ? new Date(insc.fecha_inicio_curso).toLocaleDateString('es-AR') : '—'}
                                     {insc.fecha_fin_curso ? ' → ' + new Date(insc.fecha_fin_curso).toLocaleDateString('es-AR') : ''}
                                 </td>
                                 <td>
@@ -197,7 +200,7 @@ export default function Inscripciones() {
                                     </div>
                                 </td>
                                 <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                                    {insc.fecha_carga ? new Date(insc.fecha_carga).toLocaleString('es-AR', { 
+                                    {insc.fecha_carga ? new Date(insc.fecha_carga).toLocaleString('es-AR', {
                                         day: '2-digit', month: '2-digit', year: 'numeric',
                                         hour: '2-digit', minute: '2-digit'
                                     }) : '—'}
@@ -240,15 +243,17 @@ export default function Inscripciones() {
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label className="form-label">Interno *</label>
-                                    <select className="form-select" required value={newInsc.interno_nro}
-                                        onChange={e => setNewInsc({ ...newInsc, interno_nro: e.target.value })}>
-                                        <option value="">Seleccionar interno...</option>
-                                        {internosDisponibles.map(i => (
-                                            <option key={i.numero_interno} value={i.numero_interno}>
-                                                #{i.numero_interno} — {i.nombre_completo}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <SearchableSelect
+                                        options={internosDisponibles.map(i => ({
+                                            value: i.numero_interno,
+                                            label: `#${i.numero_interno} — ${i.nombre_completo}`,
+                                            sublabel: i.dni ? `DNI ${i.dni}` : null
+                                        }))}
+                                        value={newInsc.interno_nro}
+                                        onChange={val => setNewInsc({ ...newInsc, interno_nro: val })}
+                                        placeholder="Escribí nombre o Nº de interno..."
+                                        required
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Curso *</label>

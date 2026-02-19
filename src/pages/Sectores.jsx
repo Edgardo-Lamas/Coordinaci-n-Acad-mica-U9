@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { SECTORES, INTERNOS, CURSOS, DEMO_USERS, ROLES, ESTADOS_CURSO } from '../data/mockData';
+import { SECTORES, CURSOS, DEMO_USERS, ROLES, ESTADOS_CURSO } from '../data/mockData';
+import { getInternos } from '../data/dataService';
 import { Building2, Users, BookOpen, UserCheck } from 'lucide-react';
 
 const SECTOR_COLORS = [
@@ -17,6 +18,7 @@ const SECTOR_COLORS = [
 
 export default function Sectores() {
     const navigate = useNavigate();
+    const INTERNOS = getInternos();
 
     const sectoresData = SECTORES.map((sector, i) => {
         const internosCount = INTERNOS.filter(

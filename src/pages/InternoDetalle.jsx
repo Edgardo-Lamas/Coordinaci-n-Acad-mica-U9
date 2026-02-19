@@ -1,12 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { INTERNOS, SECTORES, CURSOS, INSCRIPCIONES, CAPACITADORES } from '../data/mockData';
+import { SECTORES, CURSOS, INSCRIPCIONES, CAPACITADORES } from '../data/mockData';
+import { getInternos } from '../data/dataService';
 import {
-    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash
+    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard
 } from 'lucide-react';
 
 export default function InternoDetalle() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const INTERNOS = getInternos();
 
     const interno = INTERNOS.find(i => i.numero_interno === id);
 
@@ -87,6 +89,12 @@ export default function InternoDetalle() {
                                     <Hash size={14} />
                                     <span>Nº {interno.numero_interno}</span>
                                 </div>
+                                {interno.dni && (
+                                    <div className="profile-meta-item">
+                                        <CreditCard size={14} />
+                                        <span>DNI {interno.dni}</span>
+                                    </div>
+                                )}
                                 <div className="profile-meta-item">
                                     <Building2 size={14} />
                                     <span>{sector?.nombre || 'Sin sector'}</span>

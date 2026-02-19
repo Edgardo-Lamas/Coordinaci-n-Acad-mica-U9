@@ -1,8 +1,9 @@
 import { useAuth } from '../contexts/AuthContext';
 import {
-    INTERNOS, CURSOS, SECTORES, INSCRIPCIONES, CERTIFICADOS,
+    CURSOS, SECTORES, INSCRIPCIONES, CERTIFICADOS,
     CAPACITADORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS, ROLES
 } from '../data/mockData';
+import { getInternos } from '../data/dataService';
 import {
     Users, BookOpen, Building2, Award, TrendingUp,
     ClipboardList, UserCheck, GraduationCap, Plus, Activity
@@ -21,6 +22,7 @@ export default function Dashboard() {
     const navigate = useNavigate();
 
     // Calculate stats
+    const INTERNOS = getInternos();
     const totalInternos = INTERNOS.filter(i => i.estado === 'activo').length;
     const cursosActivos = CURSOS.filter(c =>
         c.estado === ESTADOS_CURSO.EN_CURSO || c.estado === ESTADOS_CURSO.APROBADO

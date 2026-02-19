@@ -5,7 +5,7 @@ import {
     ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, ROLES
 } from '../data/mockData';
 import {
-    Plus, Search, BookOpen, CheckCircle, XCircle, Play, Eye
+    Plus, Search, BookOpen, CheckCircle, XCircle, Play, Eye, RotateCcw
 } from 'lucide-react';
 
 export default function Cursos() {
@@ -39,6 +39,7 @@ export default function Cursos() {
                 case 'rechazar': return { ...c, estado: ESTADOS_CURSO.ARCHIVADO };
                 case 'iniciar': return { ...c, estado: ESTADOS_CURSO.EN_CURSO };
                 case 'finalizar': return { ...c, estado: ESTADOS_CURSO.FINALIZADO };
+                case 'reabrir': return { ...c, estado: ESTADOS_CURSO.PENDIENTE };
                 default: return c;
             }
         }));
@@ -197,6 +198,16 @@ export default function Cursos() {
                                                         style={{ color: 'var(--warning)' }}
                                                     >
                                                         <CheckCircle size={16} />
+                                                    </button>
+                                                )}
+                                                {(curso.estado === ESTADOS_CURSO.FINALIZADO || curso.estado === ESTADOS_CURSO.ARCHIVADO) && (
+                                                    <button
+                                                        className="btn btn-ghost btn-icon btn-sm"
+                                                        title="Reabrir (volver a Pendiente)"
+                                                        onClick={() => handleAction(curso.id, 'reabrir')}
+                                                        style={{ color: 'var(--info)' }}
+                                                    >
+                                                        <RotateCcw size={16} />
                                                     </button>
                                                 )}
                                             </div>
