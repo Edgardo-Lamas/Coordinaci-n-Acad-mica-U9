@@ -1,9 +1,9 @@
 import { useAuth } from '../contexts/AuthContext';
 import {
-    CURSOS, SECTORES, INSCRIPCIONES, CERTIFICADOS,
-    CAPACITADORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS, ROLES
+    SECTORES, CERTIFICADOS,
+    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS, ROLES
 } from '../data/mockData';
-import { getInternos } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, getInscripciones } from '../data/dataService';
 import {
     Users, BookOpen, Building2, Award, TrendingUp,
     ClipboardList, UserCheck, GraduationCap, Plus, Activity
@@ -23,6 +23,9 @@ export default function Dashboard() {
 
     // Calculate stats
     const INTERNOS = getInternos();
+    const CURSOS = getCursos();
+    const CAPACITADORES = getCapacitadores();
+    const INSCRIPCIONES = getInscripciones();
     const totalInternos = INTERNOS.filter(i => i.estado === 'activo').length;
     const cursosActivos = CURSOS.filter(c =>
         c.estado === ESTADOS_CURSO.EN_CURSO || c.estado === ESTADOS_CURSO.APROBADO
@@ -47,10 +50,16 @@ export default function Dashboard() {
         : 0;
 
     // Data for Charts
-    const sectorData = SECTORES.map(sector => {
+    const sectorDataRaw = SECTORES.map(sector => {
         const count = INTERNOS.filter(i => i.sector_actual === sector.id && i.estado === 'activo').length;
         return { name: sector.nombre, value: count };
     }).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+
+    // Include unassigned internos as "Sin sector"
+    const sinSectorCount = INTERNOS.filter(i => !i.sector_actual && i.estado === 'activo').length;
+    const sectorData = sinSectorCount > 0
+        ? [...sectorDataRaw, { name: 'Sin sector', value: sinSectorCount }]
+        : sectorDataRaw;
 
     const COLORS = ['#3b69b4', '#00c1ab', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
 

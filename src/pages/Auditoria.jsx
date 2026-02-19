@@ -39,6 +39,33 @@ export default function Auditoria() {
                 </div>
             </div>
 
+            {/* Explicación y código de colores */}
+            <div className="card" style={{ marginBottom: 'var(--space-4)', background: 'rgba(255,255,255,0.95)', borderLeft: '4px solid var(--primary-500)' }}>
+                <div className="card-body" style={{ padding: 'var(--space-4)' }}>
+                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginBottom: 'var(--space-3)', lineHeight: 1.6 }}>
+                        Este registro muestra <strong>todas las acciones realizadas en el sistema</strong>, ordenadas de la más reciente a la más antigua.
+                        Permite rastrear quién realizó cada operación, cuándo y desde qué dirección IP — fundamental para la <strong>trazabilidad institucional</strong>.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'center' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Código de colores:</span>
+                        <span className="badge badge-info">LOGIN</span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Inicios de sesión</span>
+                        <span style={{ color: 'var(--gray-300)' }}>|</span>
+                        <span className="badge badge-success">CREAR</span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Nuevos registros</span>
+                        <span style={{ color: 'var(--gray-300)' }}>|</span>
+                        <span className="badge badge-purple">APROBAR</span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Aprobaciones</span>
+                        <span style={{ color: 'var(--gray-300)' }}>|</span>
+                        <span className="badge badge-warning">EMITIR</span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Certificados</span>
+                        <span style={{ color: 'var(--gray-300)' }}>|</span>
+                        <span className="badge badge-danger">ELIMINAR / ANULAR</span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>Bajas</span>
+                    </div>
+                </div>
+            </div>
+
             <div className="toolbar">
                 <div className="toolbar-left">
                     <div className="search-bar">

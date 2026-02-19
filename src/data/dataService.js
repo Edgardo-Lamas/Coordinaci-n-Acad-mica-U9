@@ -1,7 +1,10 @@
 // Centralized Data Service — localStorage persistence for imported data
-import { INTERNOS as MOCK_INTERNOS } from './mockData';
+import { INTERNOS as MOCK_INTERNOS, CURSOS as MOCK_CURSOS, CAPACITADORES as MOCK_CAPACITADORES, INSCRIPCIONES as MOCK_INSCRIPCIONES } from './mockData';
 
 const STORAGE_KEY = 'ga_u9_internos';
+const CURSOS_KEY = 'ga_u9_cursos';
+const CAPACITADORES_KEY = 'ga_u9_capacitadores';
+const INSCRIPCIONES_KEY = 'ga_u9_inscripciones';
 
 /**
  * Get the list of internos.
@@ -90,4 +93,107 @@ export function clearImportedInternos() {
  */
 export function getInternosCount() {
     return getInternos().filter(i => i.estado === 'activo').length;
+}
+
+// ═══════════════════════════════════════════
+// CURSOS
+// ═══════════════════════════════════════════
+
+/**
+ * Get the list of cursos.
+ * Returns data from localStorage if available, otherwise mock data.
+ */
+export function getCursos() {
+    try {
+        const stored = localStorage.getItem(CURSOS_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.warn('Error reading cursos from localStorage:', e);
+    }
+    return MOCK_CURSOS;
+}
+
+/**
+ * Save the full list of cursos to localStorage.
+ */
+export function saveCursos(cursos) {
+    try {
+        localStorage.setItem(CURSOS_KEY, JSON.stringify(cursos));
+    } catch (e) {
+        console.error('Error saving cursos to localStorage:', e);
+    }
+}
+
+// ═══════════════════════════════════════════
+// CAPACITADORES
+// ═══════════════════════════════════════════
+
+/**
+ * Get the list of capacitadores.
+ */
+export function getCapacitadores() {
+    try {
+        const stored = localStorage.getItem(CAPACITADORES_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.warn('Error reading capacitadores from localStorage:', e);
+    }
+    return MOCK_CAPACITADORES;
+}
+
+/**
+ * Add a new capacitador and persist.
+ * Returns the new capacitador with generated ID.
+ */
+export function addCapacitador(nombre, institucion) {
+    const current = getCapacitadores();
+    const maxId = current.reduce((max, c) => Math.max(max, c.id), 0);
+    const nuevo = {
+        id: maxId + 1,
+        nombre: nombre.trim(),
+        dni: '',
+        institucion: (institucion || '').trim()
+    };
+    const updated = [...current, nuevo];
+    try {
+        localStorage.setItem(CAPACITADORES_KEY, JSON.stringify(updated));
+    } catch (e) {
+        console.error('Error saving capacitadores to localStorage:', e);
+    }
+    return nuevo;
+}
+
+// ═══════════════════════════════════════════
+// INSCRIPCIONES
+// ═══════════════════════════════════════════
+
+/**
+ * Get the list of inscripciones.
+ * Returns data from localStorage if available, otherwise mock data.
+ */
+export function getInscripciones() {
+    try {
+        const stored = localStorage.getItem(INSCRIPCIONES_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.warn('Error reading inscripciones from localStorage:', e);
+    }
+    return MOCK_INSCRIPCIONES;
+}
+
+/**
+ * Save the full list of inscripciones to localStorage.
+ */
+export function saveInscripciones(inscripciones) {
+    try {
+        localStorage.setItem(INSCRIPCIONES_KEY, JSON.stringify(inscripciones));
+    } catch (e) {
+        console.error('Error saving inscripciones to localStorage:', e);
+    }
 }

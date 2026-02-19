@@ -1,18 +1,20 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { SECTORES, CURSOS, INSCRIPCIONES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, CAPACITADORES, DEMO_USERS } from '../data/mockData';
-import { getInternos } from '../data/dataService';
+import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
+import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones } from '../data/dataService';
 import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download } from 'lucide-react';
 import SearchableSelect from '../components/SearchableSelect';
 import { useState } from 'react';
 
 export default function MiSector() {
     const INTERNOS = getInternos();
+    const CURSOS = getCursos();
+    const CAPACITADORES = getCapacitadores();
     const { user } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('internos');
     const [showFormInscripcion, setShowFormInscripcion] = useState(false);
-    const [inscripcionesList, setInscripcionesList] = useState(INSCRIPCIONES);
+    const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
     const [newInsc, setNewInsc] = useState({ interno_nro: '', curso_id: '' });
 
     const sector = SECTORES.find(s => s.id === user.sector_id);
@@ -31,19 +33,35 @@ export default function MiSector() {
 
     const handleCreateInscripcion = (e) => {
         e.preventDefault();
+        const cursoId = Number(newInsc.curso_id);
+        const curso = CURSOS.find(c => c.id === cursoId);
         const nuevaCarga = {
             id: inscripcionesList.length + 1,
             interno_nro: newInsc.interno_nro,
-            curso_id: Number(newInsc.curso_id),
+            curso_id: cursoId,
             calificacion: 'en_curso',
             observaciones: '',
             fecha_inscripcion: new Date().toISOString().split('T')[0],
             usuario_cargador_id: user.id,
             fecha_carga: new Date().toISOString(),
-            fecha_inicio_curso: CURSOS.find(c => c.id === Number(newInsc.curso_id))?.fecha_inicio || '',
-            fecha_fin_curso: CURSOS.find(c => c.id === Number(newInsc.curso_id))?.fecha_fin || ''
+            fecha_inicio_curso: curso?.fecha_inicio || '',
+            fecha_fin_curso: curso?.fecha_fin || ''
         };
-        setInscripcionesList([...inscripcionesList, nuevaCarga]);
+        const updatedInsc = [...inscripcionesList, nuevaCarga];
+        setInscripcionesList(updatedInsc);
+        saveInscripciones(updatedInsc);
+
+        // Assign the interno to the course's sector
+        if (curso?.sector_id) {
+            const allInternos = getInternos();
+            const updated = allInternos.map(i =>
+                i.numero_interno === newInsc.interno_nro
+                    ? { ...i, sector_actual: curso.sector_id }
+                    : i
+            );
+            saveInternos(updated);
+        }
+
         setShowFormInscripcion(false);
         setNewInsc({ interno_nro: '', curso_id: '' });
     };

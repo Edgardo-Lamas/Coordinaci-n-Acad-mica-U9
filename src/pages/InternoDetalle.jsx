@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { SECTORES, CURSOS, INSCRIPCIONES, CAPACITADORES } from '../data/mockData';
-import { getInternos } from '../data/dataService';
+import { SECTORES } from '../data/mockData';
+import { getInternos, getCursos, getCapacitadores, getInscripciones } from '../data/dataService';
 import {
     ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard
 } from 'lucide-react';
@@ -9,6 +9,8 @@ export default function InternoDetalle() {
     const { id } = useParams();
     const navigate = useNavigate();
     const INTERNOS = getInternos();
+    const CURSOS = getCursos();
+    const CAPACITADORES = getCapacitadores();
 
     const interno = INTERNOS.find(i => i.numero_interno === id);
 
@@ -30,7 +32,7 @@ export default function InternoDetalle() {
     const sector = SECTORES.find(s => s.id === interno.sector_actual);
 
     // Get all inscriptions for this intern
-    const internoInscripciones = INSCRIPCIONES.filter(
+    const internoInscripciones = getInscripciones().filter(
         i => i.interno_nro === interno.numero_interno
     );
 

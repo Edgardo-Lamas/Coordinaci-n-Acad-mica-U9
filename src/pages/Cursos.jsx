@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    CURSOS, SECTORES, CAPACITADORES, INSCRIPCIONES, TIPOS_CURSO,
+    SECTORES, TIPOS_CURSO,
     ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, ROLES
 } from '../data/mockData';
+import { getCursos, saveCursos, getCapacitadores, addCapacitador, getInscripciones } from '../data/dataService';
 import {
-    Plus, Search, BookOpen, CheckCircle, XCircle, Play, Eye, RotateCcw
+    Plus, Search, BookOpen, CheckCircle, XCircle, Play, Eye, RotateCcw, UserPlus
 } from 'lucide-react';
 
 export default function Cursos() {
@@ -14,14 +15,19 @@ export default function Cursos() {
     const [filterEstado, setFilterEstado] = useState('');
     const [filterTipo, setFilterTipo] = useState('');
     const [showForm, setShowForm] = useState(false);
-    const [cursosList, setCursosList] = useState(CURSOS);
+    const [cursosList, setCursosList] = useState(() => getCursos());
+    const [capacitadoresList, setCapacitadoresList] = useState(() => getCapacitadores());
 
     // New course form
     const [newCurso, setNewCurso] = useState({
-        nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: 1,
+        nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: '',
         programa: '', carga_horaria: '', fecha_inicio: '', fecha_fin: '',
         cupo_maximo: '', sector_id: ''
     });
+    // New capacitador inline form
+    const [showNewCapacitador, setShowNewCapacitador] = useState(false);
+    const [newCapNombre, setNewCapNombre] = useState('');
+    const [newCapInstitucion, setNewCapInstitucion] = useState('');
 
     const filteredCursos = cursosList.filter(c => {
         const matchSearch = !search || c.nombre.toLowerCase().includes(search.toLowerCase());
@@ -32,34 +38,51 @@ export default function Cursos() {
     });
 
     const handleAction = (cursoId, action) => {
-        setCursosList(prev => prev.map(c => {
-            if (c.id !== cursoId) return c;
-            switch (action) {
-                case 'aprobar': return { ...c, estado: ESTADOS_CURSO.APROBADO };
-                case 'rechazar': return { ...c, estado: ESTADOS_CURSO.ARCHIVADO };
-                case 'iniciar': return { ...c, estado: ESTADOS_CURSO.EN_CURSO };
-                case 'finalizar': return { ...c, estado: ESTADOS_CURSO.FINALIZADO };
-                case 'reabrir': return { ...c, estado: ESTADOS_CURSO.PENDIENTE };
-                default: return c;
-            }
-        }));
+        setCursosList(prev => {
+            const updated = prev.map(c => {
+                if (c.id !== cursoId) return c;
+                switch (action) {
+                    case 'aprobar': return { ...c, estado: ESTADOS_CURSO.APROBADO };
+                    case 'rechazar': return { ...c, estado: ESTADOS_CURSO.ARCHIVADO };
+                    case 'iniciar': return { ...c, estado: ESTADOS_CURSO.EN_CURSO };
+                    case 'finalizar': return { ...c, estado: ESTADOS_CURSO.FINALIZADO };
+                    case 'reabrir': return { ...c, estado: ESTADOS_CURSO.PENDIENTE };
+                    default: return c;
+                }
+            });
+            saveCursos(updated);
+            return updated;
+        });
     };
 
     const handleCreateCurso = (e) => {
         e.preventDefault();
+        // If adding a new capacitador inline
+        let capId = Number(newCurso.capacitador_id);
+        if (showNewCapacitador && newCapNombre.trim()) {
+            const nuevoCap = addCapacitador(newCapNombre, newCapInstitucion);
+            setCapacitadoresList(getCapacitadores());
+            capId = nuevoCap.id;
+        }
+        const maxId = cursosList.reduce((max, c) => Math.max(max, c.id), 0);
         const nuevo = {
             ...newCurso,
-            id: cursosList.length + 1,
+            id: maxId + 1,
             carga_horaria: Number(newCurso.carga_horaria),
             cupo_maximo: Number(newCurso.cupo_maximo),
-            capacitador_id: Number(newCurso.capacitador_id),
+            capacitador_id: capId,
             sector_id: Number(newCurso.sector_id),
             estado: ESTADOS_CURSO.PENDIENTE
         };
-        setCursosList([...cursosList, nuevo]);
+        const updated = [...cursosList, nuevo];
+        setCursosList(updated);
+        saveCursos(updated);
         setShowForm(false);
+        setShowNewCapacitador(false);
+        setNewCapNombre('');
+        setNewCapInstitucion('');
         setNewCurso({
-            nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: 1,
+            nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: '',
             programa: '', carga_horaria: '', fecha_inicio: '', fecha_fin: '',
             cupo_maximo: '', sector_id: ''
         });
@@ -130,8 +153,8 @@ export default function Cursos() {
                     <tbody>
                         {filteredCursos.length > 0 ? filteredCursos.map(curso => {
                             const sector = SECTORES.find(s => s.id === curso.sector_id);
-                            const cap = CAPACITADORES.find(c => c.id === curso.capacitador_id);
-                            const inscriptos = INSCRIPCIONES.filter(i => i.curso_id === curso.id).length;
+                            const cap = capacitadoresList.find(c => c.id === curso.capacitador_id);
+                            const inscriptos = getInscripciones().filter(i => i.curso_id === curso.id).length;
                             return (
                                 <tr key={curso.id}>
                                     <td style={{ fontWeight: 600 }}>{curso.nombre}</td>
@@ -264,11 +287,40 @@ export default function Cursos() {
                                     </div>
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Capacitador *</label>
-                                    <select className="form-select" value={newCurso.capacitador_id}
-                                        onChange={e => setNewCurso({ ...newCurso, capacitador_id: e.target.value })}>
-                                        {CAPACITADORES.map(c => <option key={c.id} value={c.id}>{c.nombre} — {c.institucion}</option>)}
-                                    </select>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <label className="form-label" style={{ margin: 0 }}>Capacitador *</label>
+                                        <button
+                                            type="button"
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => setShowNewCapacitador(!showNewCapacitador)}
+                                            style={{ fontSize: 'var(--text-xs)', gap: 4, color: 'var(--primary-600)' }}
+                                        >
+                                            {showNewCapacitador ? 'Seleccionar existente' : <><UserPlus size={14} /> Nuevo</>}
+                                        </button>
+                                    </div>
+                                    {showNewCapacitador ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+                                            <input
+                                                className="form-input"
+                                                placeholder="Nombre del capacitador *"
+                                                required
+                                                value={newCapNombre}
+                                                onChange={e => setNewCapNombre(e.target.value)}
+                                            />
+                                            <input
+                                                className="form-input"
+                                                placeholder="Institución (opcional)"
+                                                value={newCapInstitucion}
+                                                onChange={e => setNewCapInstitucion(e.target.value)}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <select className="form-select" required value={newCurso.capacitador_id}
+                                            onChange={e => setNewCurso({ ...newCurso, capacitador_id: e.target.value })}>
+                                            <option value="">Seleccionar...</option>
+                                            {capacitadoresList.map(c => <option key={c.id} value={c.id}>{c.nombre}{c.institucion ? ` — ${c.institucion}` : ''}</option>)}
+                                        </select>
+                                    )}
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Programa / Descripción</label>

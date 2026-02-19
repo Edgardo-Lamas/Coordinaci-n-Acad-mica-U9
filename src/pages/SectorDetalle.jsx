@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    SECTORES, CURSOS, INSCRIPCIONES, DEMO_USERS, ROLES,
-    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, CAPACITADORES
+    SECTORES, DEMO_USERS, ROLES,
+    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES
 } from '../data/mockData';
-import { getInternos } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
     ArrowLeft, Users, BookOpen, UserCheck, Building2, Eye, Plus, XCircle, Download, ClipboardList
@@ -18,7 +18,7 @@ export default function SectorDetalle() {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('internos');
     const [showFormInscripcion, setShowFormInscripcion] = useState(false);
-    const [inscripcionesList, setInscripcionesList] = useState(INSCRIPCIONES);
+    const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
     const [newInsc, setNewInsc] = useState({ interno_nro: '', curso_id: '' });
 
     const sector = SECTORES.find(s => s.id === Number(id));
@@ -35,6 +35,8 @@ export default function SectorDetalle() {
         );
     }
 
+    const CURSOS = getCursos();
+    const CAPACITADORES = getCapacitadores();
     const sectorInternos = INTERNOS.filter(i => i.sector_actual === sector.id);
     const sectorCursos = CURSOS.filter(c => c.sector_id === sector.id);
     const sectorResponsables = DEMO_USERS.filter(u => u.rol === ROLES.RESPONSABLE && u.sector_id === sector.id);
@@ -51,19 +53,35 @@ export default function SectorDetalle() {
 
     const handleCreateInscripcion = (e) => {
         e.preventDefault();
+        const cursoId = Number(newInsc.curso_id);
+        const curso = CURSOS.find(c => c.id === cursoId);
         const nuevaCarga = {
             id: inscripcionesList.length + 1,
             interno_nro: newInsc.interno_nro,
-            curso_id: Number(newInsc.curso_id),
+            curso_id: cursoId,
             calificacion: 'en_curso',
             observaciones: '',
             fecha_inscripcion: new Date().toISOString().split('T')[0],
             usuario_cargador_id: user.id,
             fecha_carga: new Date().toISOString(),
-            fecha_inicio_curso: CURSOS.find(c => c.id === Number(newInsc.curso_id))?.fecha_inicio || '',
-            fecha_fin_curso: CURSOS.find(c => c.id === Number(newInsc.curso_id))?.fecha_fin || ''
+            fecha_inicio_curso: curso?.fecha_inicio || '',
+            fecha_fin_curso: curso?.fecha_fin || ''
         };
-        setInscripcionesList([...inscripcionesList, nuevaCarga]);
+        const updatedInsc = [...inscripcionesList, nuevaCarga];
+        setInscripcionesList(updatedInsc);
+        saveInscripciones(updatedInsc);
+
+        // Assign the interno to the course's sector
+        if (curso?.sector_id) {
+            const allInternos = getInternos();
+            const updated = allInternos.map(i =>
+                i.numero_interno === newInsc.interno_nro
+                    ? { ...i, sector_actual: curso.sector_id }
+                    : i
+            );
+            saveInternos(updated);
+        }
+
         setShowFormInscripcion(false);
         setNewInsc({ interno_nro: '', curso_id: '' });
     };
@@ -246,7 +264,7 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                         <tbody>
                             {sectorCursos.length > 0 ? sectorCursos.map(curso => {
                                 const cap = CAPACITADORES.find(c => c.id === curso.capacitador_id);
-                                const inscriptos = INSCRIPCIONES.filter(i => i.curso_id === curso.id).length;
+                                const inscriptos = inscripcionesList.filter(i => i.curso_id === curso.id).length;
                                 return (
                                     <tr key={curso.id}>
                                         <td style={{ fontWeight: 600 }}>{curso.nombre}</td>
