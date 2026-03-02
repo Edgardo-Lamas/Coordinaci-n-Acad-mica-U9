@@ -101,7 +101,10 @@ export default function Cursos() {
                     </p>
                 </div>
                 {(isCoordinacion() || isAdmin()) && (
-                    <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+                    <button className="btn btn-primary" onClick={() => {
+                        setCapacitadoresList(getCapacitadores());
+                        setShowForm(true);
+                    }}>
                         <Plus size={18} /> Nuevo Curso
                     </button>
                 )}

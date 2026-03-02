@@ -13,6 +13,7 @@ import Cursos from './pages/Cursos';
 import Inscripciones from './pages/Inscripciones';
 import Auditoria from './pages/Auditoria';
 import MiSector from './pages/MiSector';
+import Certificados from './pages/Certificados';
 import { ROLES } from './data/mockData';
 
 function App() {
@@ -54,10 +55,7 @@ function App() {
             <Route path="inscripciones" element={<Inscripciones />} />
             <Route path="certificados" element={
               <ProtectedRoute roles={[ROLES.ADMIN, ROLES.COORDINACION]}>
-                <div className="empty-state" style={{ paddingTop: 80 }}>
-                  <div className="empty-title">Certificados</div>
-                  <div className="empty-text">Módulo disponible en la Fase 4</div>
-                </div>
+                <Certificados />
               </ProtectedRoute>
             } />
             <Route path="auditoria" element={

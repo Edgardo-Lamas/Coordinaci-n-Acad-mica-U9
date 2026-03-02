@@ -1,16 +1,43 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SECTORES } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, getInscripciones } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados } from '../data/dataService';
+import { useAuth } from '../contexts/AuthContext';
 import {
-    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard
+    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard, Clock
 } from 'lucide-react';
 
 export default function InternoDetalle() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user, isResponsable, isCargador } = useAuth();
     const INTERNOS = getInternos();
     const CURSOS = getCursos();
     const CAPACITADORES = getCapacitadores();
+    const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
+    const [certificadosList, setCertificadosList] = useState(() => getCertificados());
+    const [toast, setToast] = useState(null);
+
+    const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3500);
+    };
+
+    const handleCalifChange = (inscId, newCalif) => {
+        const insc = inscripcionesList.find(i => i.id === inscId);
+        if (!insc) return;
+        const prevCalif = insc.calificacion;
+        const updated = inscripcionesList.map(i =>
+            i.id === inscId ? { ...i, calificacion: newCalif } : i
+        );
+        setInscripcionesList(updated);
+        saveInscripciones(updated);
+        if (newCalif === 'aprobado' && prevCalif !== 'aprobado') {
+            createCertificadoPendiente(inscId);
+            setCertificadosList(getCertificados());
+            showToast('Certificado enviado a Coordinación para aprobación');
+        }
+    };
 
     const interno = INTERNOS.find(i => i.numero_interno === id);
 
@@ -32,7 +59,7 @@ export default function InternoDetalle() {
     const sector = SECTORES.find(s => s.id === interno.sector_actual);
 
     // Get all inscriptions for this intern
-    const internoInscripciones = getInscripciones().filter(
+    const internoInscripciones = inscripcionesList.filter(
         i => i.interno_nro === interno.numero_interno
     );
 
@@ -71,10 +98,10 @@ export default function InternoDetalle() {
             {/* Back button */}
             <button
                 className="btn btn-ghost"
-                onClick={() => navigate('/internos')}
+                onClick={() => navigate(-1)}
                 style={{ marginBottom: 'var(--space-4)' }}
             >
-                <ArrowLeft size={18} /> Volver a Internos
+                <ArrowLeft size={18} /> Volver
             </button>
 
             {/* Profile Header */}
@@ -166,26 +193,64 @@ export default function InternoDetalle() {
                                     <th>Carga Horaria</th>
                                     <th>Inscripción</th>
                                     <th>Calificación</th>
-                                    <th>Observaciones</th>
+                                    <th>Certificado</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {cursosDelInterno.map(item => (
+                                {cursosDelInterno.map(item => {
+                                    const cert = certificadosList.find(c => c.inscripcion_id === item.id);
+                                    // Responsable/Cargador solo cambia estados de su propio sector
+                                    const puedeEditar = !isResponsable() && !isCargador()
+                                        ? true
+                                        : item.curso?.sector_id === user.sector_id;
+                                    return (
                                     <tr key={item.id}>
                                         <td style={{ fontWeight: 600 }}>{item.curso?.nombre || '—'}</td>
                                         <td>{item.curso?.tipo || '—'}</td>
                                         <td>{item.sectorCurso?.nombre || '—'}</td>
                                         <td>{item.capacitador?.nombre || '—'}</td>
                                         <td>{item.curso?.carga_horaria || '—'}h</td>
-                                        <td>{new Date(item.fecha_inscripcion).toLocaleDateString('es-AR')}</td>
-                                        <td>
-                                            <span className={`badge ${getCalificacionBadge(item.calificacion)}`}>
-                                                {getCalificacionLabel(item.calificacion)}
-                                            </span>
+                                        <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+                                            {new Date(item.fecha_inscripcion).toLocaleDateString('es-AR')}
                                         </td>
-                                        <td>{item.observaciones || '—'}</td>
+                                        <td>
+                                            {puedeEditar ? (
+                                                <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
+                                                    <button
+                                                        className={`btn btn-sm ${item.calificacion === 'en_curso' ? 'btn-primary' : 'btn-ghost'}`}
+                                                        onClick={() => handleCalifChange(item.id, 'en_curso')}
+                                                    >En Curso</button>
+                                                    <button
+                                                        className={`btn btn-sm ${item.calificacion === 'aprobado' ? 'btn-success' : 'btn-ghost'}`}
+                                                        onClick={() => handleCalifChange(item.id, 'aprobado')}
+                                                    >Aprobado</button>
+                                                    <button
+                                                        className={`btn btn-sm ${item.calificacion === 'desaprobado' ? 'btn-danger' : 'btn-ghost'}`}
+                                                        onClick={() => handleCalifChange(item.id, 'desaprobado')}
+                                                    >Desaprobado</button>
+                                                </div>
+                                            ) : (
+                                                <span className={`badge ${getCalificacionBadge(item.calificacion)}`}>
+                                                    {getCalificacionLabel(item.calificacion)}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            {!cert && <span style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>—</span>}
+                                            {cert?.estado === 'emitido' && (
+                                                <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                    <Award size={11} /> Emitido
+                                                </span>
+                                            )}
+                                            {cert?.estado === 'pendiente' && (
+                                                <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                    <Clock size={11} /> Pend. coord.
+                                                </span>
+                                            )}
+                                        </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -201,6 +266,20 @@ export default function InternoDetalle() {
                     </div>
                 )}
             </div>
+
+            {toast && (
+                <div style={{
+                    position: 'fixed', bottom: 28, right: 28, zIndex: 500,
+                    background: '#166534', color: '#fff',
+                    padding: '12px 20px', borderRadius: 8,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    fontSize: 'var(--text-sm)', fontFamily: 'sans-serif'
+                }}>
+                    <Award size={16} />
+                    {toast}
+                </div>
+            )}
         </div>
     );
 }

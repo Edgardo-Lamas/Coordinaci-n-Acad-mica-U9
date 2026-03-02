@@ -10,11 +10,11 @@ import {
 const ITEMS_PER_PAGE = 12;
 
 export default function Internos() {
-    const { isResponsable, user } = useAuth();
+    const { isResponsable, isCargador, user } = useAuth();
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [filterSector, setFilterSector] = useState(
-        isResponsable() ? String(user.sector_id) : ''
+        isResponsable() || isCargador() ? String(user.sector_id) : ''
     );
     const [filterEstado, setFilterEstado] = useState('');
     const [page, setPage] = useState(1);
@@ -69,7 +69,7 @@ export default function Internos() {
                     </div>
                 </div>
                 <div className="toolbar-right">
-                    {!isResponsable() && (
+                    {!isResponsable() && !isCargador() && (
                         <select
                             className="filter-select"
                             value={filterSector}

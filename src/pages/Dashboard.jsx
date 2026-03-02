@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     SECTORES, CERTIFICADOS,
     ESTADOS_CURSO, ESTADOS_CURSO_LABELS, DEMO_USERS, ROLES
 } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, getInscripciones } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, getInscripciones, addCapacitador } from '../data/dataService';
 import {
     Users, BookOpen, Building2, Award, TrendingUp,
-    ClipboardList, UserCheck, GraduationCap, Plus, Activity
+    ClipboardList, UserCheck, GraduationCap, Plus, Activity, XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,10 +22,26 @@ export default function Dashboard() {
     const { user, isAdmin, isCoordinacion, isResponsable } = useAuth();
     const navigate = useNavigate();
 
+    // Capacitadores como estado reactivo
+    const [capacitadoresList, setCapacitadoresList] = useState(() => getCapacitadores());
+    const [showCapForm, setShowCapForm] = useState(false);
+    const [newCapNombre, setNewCapNombre] = useState('');
+    const [newCapInstitucion, setNewCapInstitucion] = useState('');
+
+    const handleAddCapacitador = (e) => {
+        e.preventDefault();
+        if (!newCapNombre.trim()) return;
+        addCapacitador(newCapNombre, newCapInstitucion);
+        setCapacitadoresList(getCapacitadores());
+        setNewCapNombre('');
+        setNewCapInstitucion('');
+        setShowCapForm(false);
+    };
+
     // Calculate stats
     const INTERNOS = getInternos();
     const CURSOS = getCursos();
-    const CAPACITADORES = getCapacitadores();
+    const CAPACITADORES = capacitadoresList;
     const INSCRIPCIONES = getInscripciones();
     const totalInternos = INTERNOS.filter(i => i.estado === 'activo').length;
     const cursosActivos = CURSOS.filter(c =>
@@ -308,9 +325,11 @@ export default function Dashboard() {
                                     <UserCheck size={20} style={{ marginRight: 8, verticalAlign: 'middle' }} />
                                     Capacitadores
                                 </h2>
-                                <button className="btn btn-primary btn-sm">
-                                    <Plus size={16} /> Agregar
-                                </button>
+                                {(isAdmin() || isCoordinacion()) && (
+                                    <button className="btn btn-primary btn-sm" onClick={() => setShowCapForm(true)}>
+                                        <Plus size={16} /> Agregar
+                                    </button>
+                                )}
                             </div>
                             <div className="table-container" style={{ border: 'none', borderRadius: 0, maxHeight: '400px', overflowY: 'auto' }}>
                                 <table className="data-table">
@@ -491,6 +510,51 @@ export default function Dashboard() {
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Agregar Capacitador */}
+            {showCapForm && (
+                <div className="modal-overlay" onClick={() => setShowCapForm(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">Nuevo Capacitador</h2>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowCapForm(false)}>
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleAddCapacitador}>
+                            <div className="modal-body">
+                                <div className="form-group">
+                                    <label className="form-label">Nombre completo *</label>
+                                    <input
+                                        className="form-input"
+                                        required
+                                        placeholder="Ej: Juan García"
+                                        value={newCapNombre}
+                                        onChange={e => setNewCapNombre(e.target.value)}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Institución</label>
+                                    <input
+                                        className="form-input"
+                                        placeholder="Ej: Universidad Nacional de La Plata"
+                                        value={newCapInstitucion}
+                                        onChange={e => setNewCapInstitucion(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowCapForm(false)}>
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="btn btn-primary">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

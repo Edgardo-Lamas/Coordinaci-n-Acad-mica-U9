@@ -4,9 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     SECTORES, ESTADOS_CURSO, DEMO_USERS, ROLES
 } from '../data/mockData';
-import { getInternos, getCursos, saveInternos, getInscripciones, saveInscripciones } from '../data/dataService';
+import { getInternos, getCursos, saveInternos, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados } from '../data/dataService';
 import {
-    Search, Plus, ClipboardList, Eye, Edit, XCircle, User
+    Search, Plus, ClipboardList, Eye, Edit, XCircle, User, Award, CheckCircle2, Clock
 } from 'lucide-react';
 import SearchableSelect from '../components/SearchableSelect';
 
@@ -20,7 +20,14 @@ export default function Inscripciones() {
     const [filterSector, setFilterSector] = useState(isResponsable() || isCargador() ? String(user.sector_id) : '');
     const [showForm, setShowForm] = useState(false);
     const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
+    const [certificadosList, setCertificadosList] = useState(() => getCertificados());
+    const [toast, setToast] = useState(null);
     const [newInsc, setNewInsc] = useState({ interno_nro: '', curso_id: '' });
+
+    const showToast = (msg, type = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3500);
+    };
 
     const getCalificacionBadge = (cal) => {
         switch (cal) {
@@ -67,9 +74,19 @@ export default function Inscripciones() {
     });
 
     const handleCalifChange = (inscId, newCalif) => {
-        setInscripcionesList(prev => prev.map(i =>
+        const insc = inscripcionesList.find(i => i.id === inscId);
+        if (!insc) return;
+        const prevCalif = insc.calificacion;
+        const updatedList = inscripcionesList.map(i =>
             i.id === inscId ? { ...i, calificacion: newCalif } : i
-        ));
+        );
+        setInscripcionesList(updatedList);
+        saveInscripciones(updatedList);
+        if (newCalif === 'aprobado' && prevCalif !== 'aprobado') {
+            createCertificadoPendiente(inscId);
+            setCertificadosList(getCertificados());
+            showToast('Certificado enviado a Coordinación para aprobación');
+        }
     };
 
     const handleCreateInscripcion = (e) => {
@@ -188,6 +205,7 @@ export default function Inscripciones() {
                             <th>Curso</th>
                             <th>Período</th>
                             <th>Calificación</th>
+                            <th>Certificado</th>
                             <th>Cargado por</th>
                             <th>Fecha Carga</th>
                             <th>Acciones</th>
@@ -206,9 +224,36 @@ export default function Inscripciones() {
                                     {insc.fecha_fin_curso ? ' → ' + new Date(insc.fecha_fin_curso).toLocaleDateString('es-AR') : ''}
                                 </td>
                                 <td>
-                                    <span className={`badge ${getCalificacionBadge(insc.calificacion)}`}>
-                                        {getCalificacionLabel(insc.calificacion)}
-                                    </span>
+                                    <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
+                                        <button
+                                            className={`btn btn-sm ${insc.calificacion === 'en_curso' ? 'btn-primary' : 'btn-ghost'}`}
+                                            onClick={() => handleCalifChange(insc.id, 'en_curso')}
+                                        >En Curso</button>
+                                        <button
+                                            className={`btn btn-sm ${insc.calificacion === 'aprobado' ? 'btn-success' : 'btn-ghost'}`}
+                                            onClick={() => handleCalifChange(insc.id, 'aprobado')}
+                                        >Aprobado</button>
+                                        <button
+                                            className={`btn btn-sm ${insc.calificacion === 'desaprobado' ? 'btn-danger' : 'btn-ghost'}`}
+                                            onClick={() => handleCalifChange(insc.id, 'desaprobado')}
+                                        >Desaprobado</button>
+                                    </div>
+                                </td>
+                                <td>
+                                    {(() => {
+                                        const cert = certificadosList.find(c => c.inscripcion_id === insc.id);
+                                        if (!cert) return <span style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>—</span>;
+                                        if (cert.estado === 'emitido') return (
+                                            <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                <Award size={11} /> Emitido
+                                            </span>
+                                        );
+                                        return (
+                                            <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                <Clock size={11} /> Pend. coord.
+                                            </span>
+                                        );
+                                    })()}
                                 </td>
                                 <td style={{ fontSize: 'var(--text-xs)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
@@ -234,7 +279,7 @@ export default function Inscripciones() {
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan={8}>
+                                <td colSpan={9}>
                                     <div className="empty-state">
                                         <ClipboardList size={48} className="empty-icon" />
                                         <div className="empty-title">No hay inscripciones</div>
@@ -245,6 +290,22 @@ export default function Inscripciones() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Toast de confirmación */}
+            {toast && (
+                <div style={{
+                    position: 'fixed', bottom: 28, right: 28, zIndex: 500,
+                    background: toast.type === 'success' ? '#166534' : '#7f1d1d',
+                    color: '#fff', padding: '12px 20px', borderRadius: 8,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    fontSize: 'var(--text-sm)', fontFamily: 'sans-serif',
+                    animation: 'fadeIn 0.2s ease'
+                }}>
+                    <Award size={16} />
+                    {toast.msg}
+                </div>
+            )}
 
             {/* Create Inscription Modal */}
             {showForm && (
