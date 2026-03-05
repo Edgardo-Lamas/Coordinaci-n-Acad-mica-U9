@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
-import { X, Printer } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Printer, MessageCircle, ImageDown } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import html2canvas from 'html2canvas';
 
 const PRINT_STYLE_ID = 'cert-print-styles';
 const VERIFICAR_BASE_URL = 'https://ga.up9laplata.gob.ar/verificar/';
@@ -11,30 +13,50 @@ function injectPrintStyles() {
     style.id = PRINT_STYLE_ID;
     style.textContent = `
         @media print {
+            @page { size: A4 landscape; margin: 0; }
             body > * { display: none !important; }
-            #certificado-printable { display: block !important; }
-            @page {
-                size: A4 landscape;
-                margin: 0;
-            }
             #certificado-printable {
-                position: fixed;
-                top: 0; left: 0;
-                width: 100vw; height: 100vh;
-                background: white;
-                z-index: 99999;
+                display: block !important;
+                position: fixed !important;
+                top: 0 !important; left: 0 !important;
+                width: 100vw !important; height: 100vh !important;
+                background: white !important;
+                z-index: 99999 !important;
             }
         }
     `;
     document.head.appendChild(style);
 }
 
-export default function CertificadoModal({ cert, onClose }) {
+export default function CertificadoModal({ cert, onClose, onWhatsapp }) {
+    const previewRef = useRef(null);
+    const [exportingPng, setExportingPng] = useState(false);
+
     useEffect(() => {
         injectPrintStyles();
         document.body.style.overflow = 'hidden';
         return () => { document.body.style.overflow = ''; };
     }, []);
+
+    const handleExportPng = async () => {
+        if (!previewRef.current) return;
+        setExportingPng(true);
+        try {
+            const canvas = await html2canvas(previewRef.current, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+            });
+            const link = document.createElement('a');
+            link.download = `certificado-${cert.codigo}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (e) {
+            console.error('Error exportando PNG:', e);
+        } finally {
+            setExportingPng(false);
+        }
+    };
 
     const props = {
         interno: cert.interno,
@@ -56,25 +78,51 @@ export default function CertificadoModal({ cert, onClose }) {
                 >
                     <div className="modal-header">
                         <h2 className="modal-title">Vista previa del certificado</h2>
-                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
                             <button className="btn btn-primary btn-sm" onClick={() => window.print()}>
-                                <Printer size={16} /> Imprimir / Guardar PDF
+                                <Printer size={16} /> Imprimir / PDF
                             </button>
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={handleExportPng}
+                                disabled={exportingPng}
+                                title="Descargar como imagen PNG"
+                            >
+                                {exportingPng
+                                    ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: '2px' }} /> Generando...</>
+                                    : <><ImageDown size={16} /> PNG</>
+                                }
+                            </button>
+                            {onWhatsapp && (
+                                <button
+                                    className="btn btn-sm"
+                                    style={{ background: '#25D366', color: 'white', border: 'none' }}
+                                    onClick={onWhatsapp}
+                                    title="Notificar al familiar por WhatsApp"
+                                >
+                                    <MessageCircle size={16} /> Notificar por WhatsApp
+                                </button>
+                            )}
                             <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}>
                                 <X size={20} />
                             </button>
                         </div>
                     </div>
                     <div className="modal-body" style={{ padding: 'var(--space-6)', background: '#f3f4f6' }}>
-                        <CertificadoDocument {...props} />
+                        <div ref={previewRef}>
+                            <CertificadoDocument {...props} />
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Versión para impresión — oculta en pantalla */}
-            <div id="certificado-printable" style={{ display: 'none' }}>
-                <CertificadoDocument {...props} isPrint />
-            </div>
+            {/* Versión para impresión — renderizada directo en body via portal */}
+            {createPortal(
+                <div id="certificado-printable" style={{ display: 'none' }}>
+                    <CertificadoDocument {...props} isPrint />
+                </div>,
+                document.body
+            )}
         </>
     );
 }

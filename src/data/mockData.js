@@ -5,14 +5,16 @@ export const ROLES = {
   ADMIN: 'administrador',
   COORDINACION: 'coordinacion',
   RESPONSABLE: 'responsable',
-  CARGADOR: 'cargador_datos'
+  CARGADOR: 'cargador_datos',
+  JEFE: 'jefe_penal'
 };
 
 export const ROLE_LABELS = {
   [ROLES.ADMIN]: 'Administrador / Jefatura',
   [ROLES.COORDINACION]: 'Coordinación Académica',
   [ROLES.RESPONSABLE]: 'Responsable de Sector',
-  [ROLES.CARGADOR]: 'Cargador de Datos (PPL)'
+  [ROLES.CARGADOR]: 'Cargador de Datos (PPL)',
+  [ROLES.JEFE]: 'Jefatura del Penal'
 };
 
 export const SECTORES = [
@@ -284,6 +286,16 @@ export const DEMO_USERS = [
     nombre: 'Raúl Escobar',
     rol: ROLES.CARGADOR,
     sector_id: 10,
+    activo: true
+  },
+  // Jefatura del Penal — acceso de solo lectura / presentación
+  {
+    id: 50,
+    email: 'jefe@u9.gob.ar',
+    password: 'jefe2025',
+    nombre: 'Director Roberto Sandoval',
+    rol: ROLES.JEFE,
+    sector_id: null,
     activo: true
   },
 ];

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SECTORES } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados, updateInternoWhatsapp, addAuditLog } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard, Clock
+    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard, Clock, MessageCircle, Pencil, Check, X
 } from 'lucide-react';
 
 export default function InternoDetalle() {
@@ -15,8 +15,14 @@ export default function InternoDetalle() {
     const CURSOS = getCursos();
     const CAPACITADORES = getCapacitadores();
     const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
-    const [certificadosList, setCertificadosList] = useState(() => getCertificados());
+    const certificadosList = getCertificados();
     const [toast, setToast] = useState(null);
+    const [waContacto, setWaContacto] = useState(() => {
+        const found = getInternos().find(i => i.numero_interno === id);
+        return found?.whatsapp_contacto || '';
+    });
+    const [editingWa, setEditingWa] = useState(false);
+    const [waValue, setWaValue] = useState('');
 
     const showToast = (msg) => {
         setToast(msg);
@@ -34,9 +40,18 @@ export default function InternoDetalle() {
         saveInscripciones(updated);
         if (newCalif === 'aprobado' && prevCalif !== 'aprobado') {
             createCertificadoPendiente(inscId);
-            setCertificadosList(getCertificados());
+            const curso = CURSOS.find(c => c.id === insc.curso_id);
+            const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
+            addAuditLog(user, 'APROBAR_INSCRIPCION', 'Inscripcion', `${interno?.nombre_completo || insc.interno_nro} aprobado en "${curso?.nombre || insc.curso_id}"`);
             showToast('Certificado enviado a Coordinación para aprobación');
         }
+    };
+
+    const handleSaveWa = (e) => {
+        e.preventDefault();
+        updateInternoWhatsapp(id, waValue);
+        setWaContacto(waValue);
+        setEditingWa(false);
     };
 
     const interno = INTERNOS.find(i => i.numero_interno === id);
@@ -131,6 +146,41 @@ export default function InternoDetalle() {
                                 <div className="profile-meta-item">
                                     <Calendar size={14} />
                                     <span>Ingreso: {new Date(interno.fecha_ingreso).toLocaleDateString('es-AR')}</span>
+                                </div>
+                                <div className="profile-meta-item">
+                                    <MessageCircle size={14} style={{ color: '#25D366', flexShrink: 0 }} />
+                                    {editingWa ? (
+                                        <form onSubmit={handleSaveWa} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                            <input
+                                                className="form-input"
+                                                style={{ padding: '2px 8px', fontSize: 'var(--text-xs)', height: 28, width: 180 }}
+                                                placeholder="Ej: 5491123456789"
+                                                value={waValue}
+                                                onChange={e => setWaValue(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <button type="submit" className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--success)' }}>
+                                                <Check size={14} />
+                                            </button>
+                                            <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditingWa(false)}>
+                                                <X size={14} />
+                                            </button>
+                                        </form>
+                                    ) : (
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span style={{ color: waContacto ? 'inherit' : 'var(--gray-400)' }}>
+                                                {waContacto || 'Sin WhatsApp familiar'}
+                                            </span>
+                                            <button
+                                                className="btn btn-ghost btn-icon"
+                                                style={{ padding: 2, height: 'auto', width: 'auto', minWidth: 'unset' }}
+                                                onClick={() => { setWaValue(waContacto); setEditingWa(true); }}
+                                                title="Editar WhatsApp del familiar"
+                                            >
+                                                <Pencil size={11} />
+                                            </button>
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

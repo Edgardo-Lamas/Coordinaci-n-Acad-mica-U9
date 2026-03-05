@@ -1,5 +1,5 @@
 // Centralized Data Service — localStorage persistence for imported data
-import { INTERNOS as MOCK_INTERNOS, CURSOS as MOCK_CURSOS, CAPACITADORES as MOCK_CAPACITADORES, INSCRIPCIONES as MOCK_INSCRIPCIONES, CERTIFICADOS as MOCK_CERTIFICADOS } from './mockData';
+import { INTERNOS as MOCK_INTERNOS, CURSOS as MOCK_CURSOS, CAPACITADORES as MOCK_CAPACITADORES, INSCRIPCIONES as MOCK_INSCRIPCIONES, CERTIFICADOS as MOCK_CERTIFICADOS, AUDIT_LOG as MOCK_AUDIT_LOG, DEMO_USERS } from './mockData';
 
 const STORAGE_KEY = 'ga_u9_internos';
 const CURSOS_KEY = 'ga_u9_cursos';
@@ -306,4 +306,87 @@ export function getWhatsappConfig() {
 
 export function saveWhatsappConfig(number) {
     localStorage.setItem(WHATSAPP_KEY, number.trim());
+}
+
+/**
+ * Guarda el número de WhatsApp del familiar de contacto del interno.
+ */
+export function updateInternoWhatsapp(numero_interno, whatsapp) {
+    const internos = getInternos();
+    const updated = internos.map(i =>
+        i.numero_interno === numero_interno
+            ? { ...i, whatsapp_contacto: whatsapp.trim() }
+            : i
+    );
+    saveInternos(updated);
+    return updated.find(i => i.numero_interno === numero_interno);
+}
+
+// ═══════════════════════════════════════════
+// AUDITORÍA
+// ═══════════════════════════════════════════
+
+const AUDIT_KEY = 'ga_u9_audit_log';
+
+export function getAuditLog() {
+    try {
+        const stored = localStorage.getItem(AUDIT_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.warn('Error reading audit log from localStorage:', e);
+    }
+    return MOCK_AUDIT_LOG;
+}
+
+/**
+ * Registra una acción en el log de auditoría.
+ * @param {object} usuario - { id, nombre } del usuario que realiza la acción
+ * @param {string} accion  - Ej: 'EMITIR_CERTIFICADO', 'APROBAR_INSCRIPCION'
+ * @param {string} entidad - Ej: 'Certificado', 'Inscripcion', 'Curso'
+ * @param {string} detalle - Descripción legible de la acción
+ */
+export function addAuditLog(usuario, accion, entidad, detalle) {
+    try {
+        const current = getAuditLog();
+        const maxId = current.reduce((max, l) => Math.max(max, l.id || 0), 0);
+        const entry = {
+            id: maxId + 1,
+            usuario_id: usuario?.id || 0,
+            usuario_nombre: usuario?.nombre || 'Sistema',
+            accion,
+            entidad,
+            detalle,
+            fecha: new Date().toISOString(),
+            ip: '127.0.0.1',
+        };
+        localStorage.setItem(AUDIT_KEY, JSON.stringify([entry, ...current]));
+    } catch (e) {
+        console.warn('Error saving audit log:', e);
+    }
+}
+
+// ═══════════════════════════════════════════
+// USUARIOS
+// ═══════════════════════════════════════════
+
+const USUARIOS_KEY = 'ga_u9_usuarios';
+
+export function getUsuarios() {
+    try {
+        const stored = localStorage.getItem(USUARIOS_KEY);
+        if (stored) return JSON.parse(stored);
+    } catch (e) {
+        console.warn('Error reading usuarios from localStorage:', e);
+    }
+    return DEMO_USERS;
+}
+
+export function saveUsuarios(usuarios) {
+    try {
+        localStorage.setItem(USUARIOS_KEY, JSON.stringify(usuarios));
+    } catch (e) {
+        console.error('Error saving usuarios to localStorage:', e);
+    }
 }

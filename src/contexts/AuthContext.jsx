@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { DEMO_USERS, ROLES, ROLE_LABELS, SECTORES } from '../data/mockData';
+import { ROLES, ROLE_LABELS, SECTORES } from '../data/mockData';
+import { addAuditLog, getUsuarios } from '../data/dataService';
 
 const AuthContext = createContext(null);
 
 // DEV MODE: Set to false to enable authentication requirement
-const DEV_MODE = true;
+const DEV_MODE = false;
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
@@ -40,8 +41,7 @@ export function AuthProvider({ children }) {
     }, []);
 
     const login = async (email, password) => {
-        // Demo mode: check against mock users
-        const found = DEMO_USERS.find(
+        const found = getUsuarios().find(
             u => u.email === email && u.password === password && u.activo
         );
 
@@ -63,10 +63,15 @@ export function AuthProvider({ children }) {
 
         localStorage.setItem('ga_user', JSON.stringify(userData));
         setUser(userData);
+        addAuditLog(userData, 'LOGIN', 'Sesión', `Inicio de sesión — ${userData.rolLabel}`);
         return userData;
     };
 
     const logout = () => {
+        const currentUser = JSON.parse(localStorage.getItem('ga_user') || 'null');
+        if (currentUser) {
+            addAuditLog(currentUser, 'LOGOUT', 'Sesión', `Cierre de sesión — ${currentUser.rolLabel}`);
+        }
         localStorage.removeItem('ga_user');
         setUser(null);
     };
@@ -75,6 +80,7 @@ export function AuthProvider({ children }) {
     const isCoordinacion = () => user?.rol === ROLES.COORDINACION;
     const isResponsable = () => user?.rol === ROLES.RESPONSABLE;
     const isCargador = () => user?.rol === ROLES.CARGADOR;
+    const isJefe = () => user?.rol === ROLES.JEFE;
 
     const canAccess = (requiredRoles) => {
         if (!user) return false;
@@ -92,6 +98,7 @@ export function AuthProvider({ children }) {
             isCoordinacion,
             isResponsable,
             isCargador,
+            isJefe,
             canAccess,
         }}>
             {children}

@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES } from '../data/mockData';
 import {
     LayoutDashboard, Users, Building2, BookOpen, ClipboardList,
     Award, Shield, Settings, LogOut, Menu, X, GraduationCap,
-    FileSpreadsheet, UserCog
+    FileSpreadsheet, BarChart2, ArrowLeft
 } from 'lucide-react';
+import GlobalSearch from './GlobalSearch';
+
+// Rutas "raíz" donde el botón atrás no tiene sentido
+const ROOT_PATHS = ['/', '/internos', '/cursos', '/inscripciones', '/sectores',
+    '/mi-sector', '/certificados', '/reportes', '/auditoria', '/importar', '/configuracion'];
 
 const NAV_CONFIG = [
     {
@@ -28,14 +33,15 @@ const NAV_CONFIG = [
     {
         section: 'CERTIFICACIÓN',
         items: [
-            { path: '/certificados', label: 'Certificados', icon: Award, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
+            { path: '/certificados', label: 'Certificados', icon: Award, roles: [ROLES.ADMIN, ROLES.COORDINACION, ROLES.JEFE] },
+            { path: '/reportes', label: 'Reportes', icon: BarChart2, roles: [ROLES.ADMIN, ROLES.COORDINACION, ROLES.JEFE] },
         ]
     },
     {
         section: 'ADMINISTRACIÓN',
         items: [
             { path: '/importar', label: 'Importar Excel', icon: FileSpreadsheet, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
-            { path: '/auditoria', label: 'Auditoría', icon: Shield, roles: [ROLES.ADMIN] },
+            { path: '/auditoria', label: 'Auditoría', icon: Shield, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
             { path: '/configuracion', label: 'Configuración', icon: Settings, roles: [ROLES.ADMIN] },
         ]
     }
@@ -44,7 +50,10 @@ const NAV_CONFIG = [
 export default function Layout() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const showBackButton = !ROOT_PATHS.includes(location.pathname);
 
     const handleLogout = () => {
         logout();
@@ -131,7 +140,18 @@ export default function Layout() {
                         >
                             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
+                        {showBackButton && (
+                            <button
+                                className="btn btn-ghost btn-sm"
+                                onClick={() => navigate(-1)}
+                                style={{ color: 'rgba(255,255,255,0.7)', gap: 4 }}
+                                title="Volver a la pantalla anterior"
+                            >
+                                <ArrowLeft size={16} /> Volver
+                            </button>
+                        )}
                     </div>
+                    <GlobalSearch />
                     <div className="header-right">
                         {user?.sectorNombre && (
                             <span className="badge badge-info">{user.sectorNombre}</span>

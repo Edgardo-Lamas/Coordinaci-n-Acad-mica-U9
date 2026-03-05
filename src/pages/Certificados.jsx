@@ -4,13 +4,14 @@ import { SECTORES } from '../data/mockData';
 import {
     getCertificados, emitirCertificados,
     getInscripciones, getCursos, getInternos, getCapacitadores,
-    getWhatsappConfig, saveWhatsappConfig
+    getWhatsappConfig, saveWhatsappConfig, addAuditLog
 } from '../data/dataService';
-import { Award, CheckCircle, Clock, MessageCircle, Printer, Settings } from 'lucide-react';
+import { Award, CheckCircle, Clock, MessageCircle, Printer, Settings, Download } from 'lucide-react';
 import CertificadoModal from '../components/CertificadoModal';
+import { exportCertificados } from '../utils/exportExcel';
 
 export default function Certificados() {
-    const { isAdmin, isCoordinacion } = useAuth();
+    const { user, isAdmin, isCoordinacion } = useAuth();
     const canEmit = isAdmin() || isCoordinacion();
 
     const [certificados, setCertificados] = useState(() => getCertificados());
@@ -56,12 +57,18 @@ export default function Certificados() {
         if (selectedCodigos.length === 0) return;
         const updated = emitirCertificados(selectedCodigos);
         setCertificados(updated);
+        addAuditLog(user, 'EMITIR_CERTIFICADO', 'Certificado', `Emisión bulk de ${selectedCodigos.length} certificado(s): ${selectedCodigos.join(', ')}`);
         setSelectedCodigos([]);
+        setTab('historial');
     };
 
     const handleEmitirUno = (codigo) => {
         const updated = emitirCertificados([codigo]);
         setCertificados(updated);
+        addAuditLog(user, 'EMITIR_CERTIFICADO', 'Certificado', `Emisión individual: ${codigo}`);
+        setTab('historial');
+        const certEmitido = updated.map(enrichCert).find(c => c.codigo === codigo);
+        if (certEmitido) setPreviewCert(certEmitido);
     };
 
     const handleSaveWhatsapp = () => {
@@ -70,16 +77,23 @@ export default function Certificados() {
     };
 
     const handleShareWhatsapp = (cert) => {
-        const number = whatsappNumber.replace(/\D/g, '');
+        const number = (cert.interno?.whatsapp_contacto || '').replace(/\D/g, '');
+        if (!number) return;
         const nombreInterno = cert.interno?.nombre_completo || 'el interno';
         const nombreCurso = cert.curso?.nombre || 'el curso';
         const fecha = cert.fecha_emision
             ? new Date(cert.fecha_emision + 'T12:00:00').toLocaleDateString('es-AR')
             : '';
         const message = encodeURIComponent(
-            `Estimado/a, se informa la emisión del certificado ${cert.codigo} para ${nombreInterno}, correspondiente al curso "${nombreCurso}", emitido el ${fecha}. — Sistema de Gestión Académica, UP N°9 La Plata.`
+            `Estimado/a familiar de ${nombreInterno}, se informa la emisión del certificado ${cert.codigo} correspondiente al curso "${nombreCurso}", emitido el ${fecha}. Código de verificación: ${cert.hash_integridad || cert.codigo}. — Sistema de Gestión Académica, UP N°9 La Plata.`
         );
-        window.open(`https://wa.me/${number}?text=${message}`, '_blank');
+        const a = document.createElement('a');
+        a.href = `https://wa.me/${number}?text=${message}`;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     };
 
     return (
@@ -93,12 +107,24 @@ export default function Certificados() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                    {emitidos.length > 0 && (
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => exportCertificados(
+                                certificados.filter(c => c.estado === 'emitido'),
+                                getInternos(), getCursos(), getInscripciones(), SECTORES
+                            )}
+                            title="Exportar historial a Excel"
+                        >
+                            <Download size={16} /> Exportar
+                        </button>
+                    )}
                     <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => setShowWhatsappConfig(v => !v)}
-                        title="Configurar número de WhatsApp de Jefatura"
+                        title="El número de WhatsApp de cada interno se carga en su perfil"
                     >
-                        <Settings size={16} /> WhatsApp
+                        <Settings size={16} /> Config
                     </button>
                     {canEmit && selectedCodigos.length > 0 && (
                         <button className="btn btn-success" onClick={handleEmitirBulk}>
@@ -324,15 +350,19 @@ export default function Certificados() {
                                             >
                                                 <Printer size={14} /> Ver
                                             </button>
-                                            {whatsappNumber && (
+                                            {cert.interno?.whatsapp_contacto ? (
                                                 <button
                                                     className="btn btn-ghost btn-sm"
                                                     style={{ color: '#25D366' }}
                                                     onClick={() => handleShareWhatsapp(cert)}
-                                                    title="Compartir por WhatsApp"
+                                                    title={`Enviar a ${cert.interno.whatsapp_contacto}`}
                                                 >
                                                     <MessageCircle size={14} /> WhatsApp
                                                 </button>
+                                            ) : (
+                                                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }} title="Sin número de contacto">
+                                                    Sin nro.
+                                                </span>
                                             )}
                                         </div>
                                     </td>
@@ -358,6 +388,9 @@ export default function Certificados() {
                 <CertificadoModal
                     cert={previewCert}
                     onClose={() => setPreviewCert(null)}
+                    onWhatsapp={previewCert.interno?.whatsapp_contacto
+                        ? () => handleShareWhatsapp(previewCert)
+                        : undefined}
                 />
             )}
         </div>

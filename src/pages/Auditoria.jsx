@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { AUDIT_LOG, DEMO_USERS } from '../data/mockData';
-import { Shield, Search, Filter } from 'lucide-react';
+import { getAuditLog } from '../data/dataService';
+import { Shield, Search } from 'lucide-react';
 
 export default function Auditoria() {
     const [search, setSearch] = useState('');
     const [filterAccion, setFilterAccion] = useState('');
 
-    const acciones = [...new Set(AUDIT_LOG.map(l => l.accion))];
+    const auditLog = getAuditLog();
+    const acciones = [...new Set(auditLog.map(l => l.accion))];
 
-    const filtered = AUDIT_LOG.filter(log => {
+    const filtered = auditLog.filter(log => {
         const matchSearch = !search ||
             log.detalle.toLowerCase().includes(search.toLowerCase()) ||
             log.accion.toLowerCase().includes(search.toLowerCase());
@@ -99,9 +100,7 @@ export default function Auditoria() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map(log => {
-                            const usuario = DEMO_USERS.find(u => u.id === log.usuario_id);
-                            return (
+                        {filtered.map(log => (
                                 <tr key={log.id}>
                                     <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--text-xs)' }}>
                                         {new Date(log.fecha).toLocaleString('es-AR', {
@@ -109,7 +108,7 @@ export default function Auditoria() {
                                             hour: '2-digit', minute: '2-digit'
                                         })}
                                     </td>
-                                    <td style={{ fontWeight: 500 }}>{usuario?.nombre || `ID: ${log.usuario_id}`}</td>
+                                    <td style={{ fontWeight: 500 }}>{log.usuario_nombre || `ID: ${log.usuario_id}`}</td>
                                     <td>
                                         <span className={`badge ${getAccionBadge(log.accion)}`}>
                                             {log.accion}
@@ -121,8 +120,7 @@ export default function Auditoria() {
                                         {log.ip}
                                     </td>
                                 </tr>
-                            );
-                        })}
+                        ))}
                     </tbody>
                 </table>
             </div>

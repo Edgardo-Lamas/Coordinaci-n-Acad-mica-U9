@@ -4,8 +4,9 @@ import { SECTORES } from '../data/mockData';
 import { getInternos } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    Search, Plus, ChevronLeft, ChevronRight, Eye, Edit, User
+    Search, Plus, ChevronLeft, ChevronRight, Eye, Edit, User, Download
 } from 'lucide-react';
+import { exportInternos } from '../utils/exportExcel';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -50,9 +51,16 @@ export default function Internos() {
                         Registro central de personas privadas de la libertad
                     </p>
                 </div>
-                <button className="btn btn-primary" onClick={() => navigate('/internos/nuevo')}>
-                    <Plus size={18} /> Nuevo Interno
-                </button>
+                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    {!isResponsable() && !isCargador() && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => exportInternos(filtered, SECTORES)} title="Exportar lista a Excel">
+                            <Download size={16} /> Exportar
+                        </button>
+                    )}
+                    <button className="btn btn-primary" onClick={() => navigate('/internos/nuevo')}>
+                        <Plus size={18} /> Nuevo Interno
+                    </button>
+                </div>
             </div>
 
             {/* Toolbar */}

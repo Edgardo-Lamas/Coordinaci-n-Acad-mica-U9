@@ -2,9 +2,11 @@ import { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount } from '../data/dataService';
+import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount, addAuditLog } from '../data/dataService';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ImportarExcel() {
+    const { user } = useAuth();
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [importing, setImporting] = useState(false);
@@ -112,6 +114,7 @@ export default function ImportarExcel() {
                 );
                 setResult(importResult);
                 setHasData(true);
+                addAuditLog(user, 'IMPORTAR_INTERNOS', 'Interno', `Importación Excel: ${importResult.imported} registros importados, ${importResult.skipped} omitidos`);
             } catch (err) {
                 setErrors([err.message]);
             }

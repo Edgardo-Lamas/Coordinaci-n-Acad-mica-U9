@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
     SECTORES, TIPOS_CURSO,
-    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, ROLES
+    ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES
 } from '../data/mockData';
-import { getCursos, saveCursos, getCapacitadores, addCapacitador, getInscripciones } from '../data/dataService';
+import { getCursos, saveCursos, getCapacitadores, addCapacitador, getInscripciones, addAuditLog } from '../data/dataService';
 import {
-    Plus, Search, BookOpen, CheckCircle, XCircle, Play, Eye, RotateCcw, UserPlus
+    Plus, Search, BookOpen, CheckCircle, XCircle, Play, RotateCcw, UserPlus, Pencil, Trash2, Download
 } from 'lucide-react';
+import { exportCursos } from '../utils/exportExcel';
 
 export default function Cursos() {
     const { user, isAdmin, isCoordinacion, isResponsable } = useAuth();
@@ -15,15 +16,13 @@ export default function Cursos() {
     const [filterEstado, setFilterEstado] = useState('');
     const [filterTipo, setFilterTipo] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [editingCurso, setEditingCurso] = useState(null);
     const [cursosList, setCursosList] = useState(() => getCursos());
     const [capacitadoresList, setCapacitadoresList] = useState(() => getCapacitadores());
 
-    // New course form
-    const [newCurso, setNewCurso] = useState({
-        nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: '',
-        programa: '', carga_horaria: '', fecha_inicio: '', fecha_fin: '',
-        cupo_maximo: '', sector_id: ''
-    });
+    // New/edit course form
+    const emptyForm = { nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: '', programa: '', carga_horaria: '', fecha_inicio: '', fecha_fin: '', cupo_maximo: '', sector_id: '' };
+    const [newCurso, setNewCurso] = useState(emptyForm);
     // New capacitador inline form
     const [showNewCapacitador, setShowNewCapacitador] = useState(false);
     const [newCapNombre, setNewCapNombre] = useState('');
@@ -55,37 +54,78 @@ export default function Cursos() {
         });
     };
 
-    const handleCreateCurso = (e) => {
+    const openCreate = () => {
+        setCapacitadoresList(getCapacitadores());
+        setEditingCurso(null);
+        setNewCurso(emptyForm);
+        setShowNewCapacitador(false);
+        setNewCapNombre('');
+        setNewCapInstitucion('');
+        setShowForm(true);
+    };
+
+    const openEdit = (curso) => {
+        setCapacitadoresList(getCapacitadores());
+        setEditingCurso(curso);
+        setNewCurso({
+            nombre: curso.nombre,
+            tipo: curso.tipo,
+            capacitador_id: String(curso.capacitador_id),
+            programa: curso.programa || '',
+            carga_horaria: String(curso.carga_horaria),
+            fecha_inicio: curso.fecha_inicio,
+            fecha_fin: curso.fecha_fin,
+            cupo_maximo: String(curso.cupo_maximo),
+            sector_id: String(curso.sector_id),
+        });
+        setShowNewCapacitador(false);
+        setNewCapNombre('');
+        setNewCapInstitucion('');
+        setShowForm(true);
+    };
+
+    const handleSaveCurso = (e) => {
         e.preventDefault();
-        // If adding a new capacitador inline
         let capId = Number(newCurso.capacitador_id);
         if (showNewCapacitador && newCapNombre.trim()) {
             const nuevoCap = addCapacitador(newCapNombre, newCapInstitucion);
             setCapacitadoresList(getCapacitadores());
             capId = nuevoCap.id;
         }
-        const maxId = cursosList.reduce((max, c) => Math.max(max, c.id), 0);
-        const nuevo = {
+        const base = {
             ...newCurso,
-            id: maxId + 1,
             carga_horaria: Number(newCurso.carga_horaria),
             cupo_maximo: Number(newCurso.cupo_maximo),
             capacitador_id: capId,
             sector_id: Number(newCurso.sector_id),
-            estado: ESTADOS_CURSO.PENDIENTE
         };
-        const updated = [...cursosList, nuevo];
+        let updated;
+        if (editingCurso) {
+            updated = cursosList.map(c => c.id === editingCurso.id ? { ...c, ...base } : c);
+        } else {
+            const maxId = cursosList.reduce((max, c) => Math.max(max, c.id), 0);
+            updated = [...cursosList, { ...base, id: maxId + 1, estado: ESTADOS_CURSO.PENDIENTE }];
+        }
         setCursosList(updated);
         saveCursos(updated);
+        addAuditLog(user, editingCurso ? 'EDITAR_CURSO' : 'CREAR_CURSO', 'Curso', `${editingCurso ? 'Edición' : 'Creación'} del curso "${base.nombre}"`);
         setShowForm(false);
+        setEditingCurso(null);
         setShowNewCapacitador(false);
         setNewCapNombre('');
         setNewCapInstitucion('');
-        setNewCurso({
-            nombre: '', tipo: TIPOS_CURSO[0], capacitador_id: '',
-            programa: '', carga_horaria: '', fecha_inicio: '', fecha_fin: '',
-            cupo_maximo: '', sector_id: ''
-        });
+        setNewCurso(emptyForm);
+    };
+
+    const handleDeleteCurso = (cursoId) => {
+        const inscriptos = getInscripciones().filter(i => i.curso_id === cursoId).length;
+        if (inscriptos > 0) return;
+        if (!window.confirm('¿Eliminar este curso? Esta acción no se puede deshacer.')) return;
+        const curso = cursosList.find(c => c.id === cursoId);
+        const updated = cursosList.filter(c => c.id !== cursoId);
+        setCursosList(updated);
+        saveCursos(updated);
+        addAuditLog(user, 'ELIMINAR_CURSO', 'Curso', `Eliminación del curso "${curso?.nombre || cursoId}"`);
     };
 
     return (
@@ -101,12 +141,14 @@ export default function Cursos() {
                     </p>
                 </div>
                 {(isCoordinacion() || isAdmin()) && (
-                    <button className="btn btn-primary" onClick={() => {
-                        setCapacitadoresList(getCapacitadores());
-                        setShowForm(true);
-                    }}>
-                        <Plus size={18} /> Nuevo Curso
-                    </button>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => exportCursos(filteredCursos, capacitadoresList, SECTORES, getInscripciones())} title="Exportar a Excel">
+                            <Download size={16} /> Exportar
+                        </button>
+                        <button className="btn btn-primary" onClick={openCreate}>
+                            <Plus size={18} /> Nuevo Curso
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -236,6 +278,22 @@ export default function Cursos() {
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}
+                                                <button
+                                                    className="btn btn-ghost btn-icon btn-sm"
+                                                    title="Editar curso"
+                                                    onClick={() => openEdit(curso)}
+                                                >
+                                                    <Pencil size={15} />
+                                                </button>
+                                                <button
+                                                    className="btn btn-ghost btn-icon btn-sm"
+                                                    title={inscriptos > 0 ? 'No se puede eliminar: tiene inscriptos' : 'Eliminar curso'}
+                                                    onClick={() => handleDeleteCurso(curso.id)}
+                                                    style={{ color: inscriptos > 0 ? 'var(--gray-300)' : 'var(--danger)', cursor: inscriptos > 0 ? 'not-allowed' : 'pointer' }}
+                                                    disabled={inscriptos > 0}
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
                                             </div>
                                         </td>
                                     )}
@@ -257,15 +315,15 @@ export default function Cursos() {
 
             {/* Create Course Modal */}
             {showForm && (
-                <div className="modal-overlay" onClick={() => setShowForm(false)}>
+                <div className="modal-overlay" onClick={() => { setShowForm(false); setEditingCurso(null); }}>
                     <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
                         <div className="modal-header">
-                            <h2 className="modal-title">Nuevo Curso</h2>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setShowForm(false)}>
+                            <h2 className="modal-title">{editingCurso ? 'Editar Curso' : 'Nuevo Curso'}</h2>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setShowForm(false); setEditingCurso(null); }}>
                                 <XCircle size={20} />
                             </button>
                         </div>
-                        <form onSubmit={handleCreateCurso}>
+                        <form onSubmit={handleSaveCurso}>
                             <div className="modal-body">
                                 <div className="form-group">
                                     <label className="form-label">Nombre del Curso *</label>
@@ -356,8 +414,8 @@ export default function Cursos() {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancelar</button>
-                                <button type="submit" className="btn btn-primary">Crear Curso</button>
+                                <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setEditingCurso(null); }}>Cancelar</button>
+                                <button type="submit" className="btn btn-primary">{editingCurso ? 'Guardar Cambios' : 'Crear Curso'}</button>
                             </div>
                         </form>
                     </div>
