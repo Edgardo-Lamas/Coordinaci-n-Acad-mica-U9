@@ -62,10 +62,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": true,
-      "installerLanguages": [
-        "es_AR"
-      ]
+      "createDesktopShortcut": true
     },
     "mac": {
       "target": "dmg"
