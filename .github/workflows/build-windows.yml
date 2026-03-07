@@ -2,18 +2,10 @@ name: Build Windows Installer
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version (eg: 1.0.1)'
-        required: false
-        default: '1.0.0'
-        type: string
 
 jobs:
   build:
     runs-on: windows-latest
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -36,10 +28,9 @@ jobs:
           npx vite build
           npx electron-builder --win
 
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: pwsh
-        run: |
-          $exe = (Get-ChildItem "dist-electron/*.exe" | Select-Object -First 1).FullName
-          gh release create "v${{ inputs.version }}" $exe --title "Gestion Academica U9 v${{ inputs.version }}" --notes "Instalador Windows"
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist-electron/*.exe
+          retention-days: 90
