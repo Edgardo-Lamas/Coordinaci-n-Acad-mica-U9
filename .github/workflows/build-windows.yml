@@ -7,6 +7,7 @@ on:
         description: 'Versión del instalador (ej: 1.0.1)'
         required: false
         default: '1.0.0'
+        type: string
 
 permissions:
   contents: write
