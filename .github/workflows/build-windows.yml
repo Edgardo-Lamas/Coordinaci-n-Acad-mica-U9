@@ -1,0 +1,42 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión del instalador (ej: 1.0.1)'
+        required: false
+        default: '1.0.0'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build Electron (Vite + electron-builder)
+        env:
+          BUILD_TARGET: electron
+        run: |
+          npx vite build
+          npx electron-builder --win
+
+      - name: Crear GitHub Release con el instalador
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Gestión Académica U9 v${{ github.event.inputs.version }}
+          draft: false
+          prerelease: false
+          files: dist-electron/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
