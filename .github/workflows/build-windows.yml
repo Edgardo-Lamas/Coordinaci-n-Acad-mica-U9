@@ -8,6 +8,9 @@ on:
         required: false
         default: '1.0.0'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -20,8 +23,11 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Instalar dependencias
-        run: npm ci
+      - name: Instalar dependencias (sin scripts nativos)
+        run: npm ci --ignore-scripts
+
+      - name: Recompilar better-sqlite3 para Electron en Windows
+        run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Build Electron (Vite + electron-builder)
         env:
