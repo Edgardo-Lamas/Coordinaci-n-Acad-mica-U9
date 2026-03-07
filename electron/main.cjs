@@ -1,5 +1,7 @@
 const { app, BrowserWindow, shell } = require('electron')
 const path = require('path')
+const { initDatabase } = require('./database.cjs')
+const { registerIpcHandlers } = require('./ipc-handlers.cjs')
 
 const isDev = !app.isPackaged
 
@@ -30,6 +32,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  initDatabase()
+  registerIpcHandlers()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

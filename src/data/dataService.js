@@ -1,6 +1,51 @@
 // Centralized Data Service — localStorage persistence for imported data
 import { INTERNOS as MOCK_INTERNOS, CURSOS as MOCK_CURSOS, CAPACITADORES as MOCK_CAPACITADORES, INSCRIPCIONES as MOCK_INSCRIPCIONES, CERTIFICADOS as MOCK_CERTIFICADOS, AUDIT_LOG as MOCK_AUDIT_LOG, DEMO_USERS } from './mockData';
 
+// ── SQLite Bridge (Electron only) ────────────────────────────────────────────
+const IS_ELECTRON = typeof window !== 'undefined' && window.electronAPI?.isElectron === true
+
+function syncToSQLite(tableName, records) {
+    if (!IS_ELECTRON) return
+    window.electronAPI.db.saveAll(tableName, records)
+        .catch(err => console.warn(`[SQLite sync ${tableName}]`, err))
+}
+
+/**
+ * Carga todos los datos desde SQLite al iniciar en Electron.
+ * Si SQLite está vacío, localStorage mantiene su valor actual (mock data).
+ * Si falla, la app arranca igual con localStorage.
+ */
+export async function initFromSQLite() {
+    if (!IS_ELECTRON) return
+    try {
+        const [internos, cursos, capacitadores, inscripciones, certificados, auditLog, usuarios] =
+            await Promise.all([
+                window.electronAPI.db.getAll('internos'),
+                window.electronAPI.db.getAll('cursos'),
+                window.electronAPI.db.getAll('capacitadores'),
+                window.electronAPI.db.getAll('inscripciones'),
+                window.electronAPI.db.getAll('certificados'),
+                window.electronAPI.db.getAll('audit_log'),
+                window.electronAPI.db.getAll('usuarios'),
+            ])
+
+        if (internos.length)      localStorage.setItem(STORAGE_KEY,       JSON.stringify(internos))
+        if (cursos.length)        localStorage.setItem(CURSOS_KEY,         JSON.stringify(cursos))
+        if (capacitadores.length) localStorage.setItem(CAPACITADORES_KEY,  JSON.stringify(capacitadores))
+        if (inscripciones.length) localStorage.setItem(INSCRIPCIONES_KEY,  JSON.stringify(inscripciones))
+        if (certificados.length)  localStorage.setItem(CERTIFICADOS_KEY,   JSON.stringify(certificados))
+        if (auditLog.length)      localStorage.setItem(AUDIT_KEY,          JSON.stringify(auditLog))
+        if (usuarios.length)      localStorage.setItem(USUARIOS_KEY,       JSON.stringify(usuarios))
+
+        const whatsapp = await window.electronAPI.db.getConfig('whatsapp_number')
+        if (whatsapp) localStorage.setItem(WHATSAPP_KEY, whatsapp)
+
+        console.log('[SQLite] Datos hidratados en localStorage')
+    } catch (err) {
+        console.warn('[SQLite] Error al inicializar, usando localStorage:', err)
+    }
+}
+
 const STORAGE_KEY = 'ga_u9_internos';
 const CURSOS_KEY = 'ga_u9_cursos';
 const CAPACITADORES_KEY = 'ga_u9_capacitadores';
@@ -28,6 +73,7 @@ export function getInternos() {
 export function saveInternos(internos) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(internos));
+        syncToSQLite('internos', internos)
     } catch (e) {
         console.error('Error saving internos to localStorage:', e);
         throw new Error('No se pudieron guardar los datos. Verifique el espacio de almacenamiento.');
@@ -121,6 +167,7 @@ export function getCursos() {
 export function saveCursos(cursos) {
     try {
         localStorage.setItem(CURSOS_KEY, JSON.stringify(cursos));
+        syncToSQLite('cursos', cursos)
     } catch (e) {
         console.error('Error saving cursos to localStorage:', e);
     }
@@ -161,6 +208,7 @@ export function addCapacitador(nombre, institucion) {
     const updated = [...current, nuevo];
     try {
         localStorage.setItem(CAPACITADORES_KEY, JSON.stringify(updated));
+        syncToSQLite('capacitadores', updated)
     } catch (e) {
         console.error('Error saving capacitadores to localStorage:', e);
     }
@@ -193,6 +241,7 @@ export function getInscripciones() {
 export function saveInscripciones(inscripciones) {
     try {
         localStorage.setItem(INSCRIPCIONES_KEY, JSON.stringify(inscripciones));
+        syncToSQLite('inscripciones', inscripciones)
     } catch (e) {
         console.error('Error saving inscripciones to localStorage:', e);
     }
@@ -220,6 +269,7 @@ export function getCertificados() {
 export function saveCertificados(certificados) {
     try {
         localStorage.setItem(CERTIFICADOS_KEY, JSON.stringify(certificados));
+        syncToSQLite('certificados', certificados)
     } catch (e) {
         console.error('Error saving certificados to localStorage:', e);
     }
@@ -305,7 +355,12 @@ export function getWhatsappConfig() {
 }
 
 export function saveWhatsappConfig(number) {
-    localStorage.setItem(WHATSAPP_KEY, number.trim());
+    const trimmed = number.trim()
+    localStorage.setItem(WHATSAPP_KEY, trimmed);
+    if (IS_ELECTRON) {
+        window.electronAPI.db.setConfig('whatsapp_number', trimmed)
+            .catch(err => console.warn('[SQLite setConfig whatsapp]', err))
+    }
 }
 
 /**
@@ -362,6 +417,10 @@ export function addAuditLog(usuario, accion, entidad, detalle) {
             ip: '127.0.0.1',
         };
         localStorage.setItem(AUDIT_KEY, JSON.stringify([entry, ...current]));
+        if (IS_ELECTRON) {
+            window.electronAPI.db.addAuditEntry(entry)
+                .catch(err => console.warn('[SQLite addAuditEntry]', err))
+        }
     } catch (e) {
         console.warn('Error saving audit log:', e);
     }
@@ -386,6 +445,7 @@ export function getUsuarios() {
 export function saveUsuarios(usuarios) {
     try {
         localStorage.setItem(USUARIOS_KEY, JSON.stringify(usuarios));
+        syncToSQLite('usuarios', usuarios)
     } catch (e) {
         console.error('Error saving usuarios to localStorage:', e);
     }
