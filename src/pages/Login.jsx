@@ -146,8 +146,8 @@ export default function Login() {
                         </button>
                     </form>
 
-                    {/* Accesos rápidos para presentación */}
-                    <div className="login-demo">
+                    {/* Accesos rápidos — solo en entorno de desarrollo */}
+                    {import.meta.env.DEV && <div className="login-demo">
                         <div className="login-demo-title">Accesos de demostración</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             {DEMO_ACCOUNTS.map(account => {
@@ -199,9 +199,9 @@ export default function Login() {
                             })}
                         </div>
                         <div style={{ marginTop: 12, fontSize: 11, color: 'var(--gray-400)', textAlign: 'center' }}>
-                            Entorno de demostración — datos de prueba
+                            Entorno de desarrollo — datos de prueba
                         </div>
-                    </div>
+                    </div>}
                 </div>
             </div>
         </div>

@@ -31,6 +31,16 @@ export const SECTORES = [
 ];
 
 export const DEMO_USERS = [
+  // Desarrollador / soporte técnico (cuenta fija en todos los equipos)
+  {
+    id: 100,
+    email: 'soporte@u9.gob.ar',
+    password: 'U9sop0rte#2025',
+    nombre: 'Edgardo Lamas',
+    rol: ROLES.ADMIN,
+    sector_id: null,
+    activo: true
+  },
   // Administradores
   {
     id: 1,
