@@ -15,15 +15,23 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
+      - name: Set UTF-8 encoding
+        shell: cmd
+        run: chcp 65001
 
-      - name: Build Electron app
+      - name: Configure Visual Studio 2022 for native modules
+        run: npm config set msvs_version 2022
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build React app
         env:
           BUILD_TARGET: electron
-        run: |
-          npx vite build
-          npx electron-builder --win
+        run: npx vite build
+
+      - name: Package Electron app
+        run: npx electron-builder --win --publish=never
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
