@@ -15,14 +15,9 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Set UTF-8 encoding
-        shell: cmd
-        run: chcp 65001
-
-      - name: Configure Visual Studio 2022 for native modules
-        run: npm config set msvs_version 2022
-
       - name: Install dependencies
+        env:
+          npm_config_msvs_version: '2022'
         run: npm ci
 
       - name: Build React app
