@@ -1,9 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { GraduationCap, AlertCircle, Eye, EyeOff, Building2, GraduationCap as CoordIcon, Shield } from 'lucide-react';
+import { GraduationCap, AlertCircle, Eye, EyeOff, Building2, GraduationCap as CoordIcon, Shield, Settings } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
+    {
+        label: 'Administrador',
+        desc: 'Gestión de usuarios y configuración',
+        email: 'admin@sistema.gob.ar',
+        password: 'admin123',
+        icon: Settings,
+        color: '#dc2626',
+        badge: 'Admin'
+    },
     {
         label: 'Jefatura del Penal',
         desc: 'Vista general — solo lectura',
