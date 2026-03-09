@@ -532,3 +532,103 @@ export function resolveCorrectionRequest(id, resolvedByNombre, estado) {
             .catch(err => console.warn('[SQLite resolveCorrectionRequest]', err))
     }
 }
+
+// ═══════════════════════════════════════════
+// EXPORTAR / IMPORTAR DATOS DE SECTOR
+// ═══════════════════════════════════════════
+
+/**
+ * Genera el paquete de datos de un sector para enviar por email.
+ * Incluye inscripciones, cursos e internos asociados a ese sector.
+ */
+export function exportSectorData(sectorId, sectorNombre, exportadoPorNombre) {
+    const todasInscripciones = getInscripciones()
+    const todosCursos = getCursos()
+    const todosInternos = getInternos()
+
+    const cursos = todosCursos.filter(c => c.sector_id === sectorId)
+    const cursoIds = new Set(cursos.map(c => c.id))
+    const inscripciones = todasInscripciones.filter(i => cursoIds.has(i.curso_id))
+    const internoNros = [...new Set(inscripciones.map(i => i.interno_nro))]
+    const internos = todosInternos.filter(i => internoNros.includes(i.numero_interno))
+
+    return {
+        version: '1.0',
+        tipo: 'exportacion_sector',
+        sector_id: sectorId,
+        sector_nombre: sectorNombre,
+        fecha_exportacion: new Date().toISOString(),
+        exportado_por: exportadoPorNombre,
+        inscripciones,
+        cursos,
+        internos,
+    }
+}
+
+/**
+ * Fusiona los datos de un paquete de sector exportado.
+ * Upsert por id — no duplica registros ya existentes.
+ * Retorna resumen de lo importado.
+ */
+export function importSectorData(payload) {
+    if (!payload || payload.tipo !== 'exportacion_sector') {
+        throw new Error('Archivo inválido: no es un paquete de exportación de sector.')
+    }
+
+    let internosNuevos = 0, cursosNuevos = 0, inscripcionesNuevas = 0
+
+    // Merge internos
+    const existingInternos = getInternos()
+    const updatedInternos = [...existingInternos]
+    for (const interno of (payload.internos || [])) {
+        const idx = updatedInternos.findIndex(e => e.numero_interno === interno.numero_interno)
+        if (idx >= 0) {
+            updatedInternos[idx] = { ...updatedInternos[idx], ...interno }
+        } else {
+            updatedInternos.push(interno)
+            internosNuevos++
+        }
+    }
+    saveInternos(updatedInternos)
+
+    // Merge cursos
+    const existingCursos = getCursos()
+    const updatedCursos = [...existingCursos]
+    for (const curso of (payload.cursos || [])) {
+        const idx = updatedCursos.findIndex(e => e.id === curso.id)
+        if (idx >= 0) {
+            updatedCursos[idx] = { ...updatedCursos[idx], ...curso }
+        } else {
+            updatedCursos.push(curso)
+            cursosNuevos++
+        }
+    }
+    saveCursos(updatedCursos)
+
+    // Merge inscripciones
+    const existingInscr = getInscripciones()
+    const updatedInscr = [...existingInscr]
+    for (const insc of (payload.inscripciones || [])) {
+        const idx = updatedInscr.findIndex(e => e.id === insc.id)
+        if (idx >= 0) {
+            updatedInscr[idx] = { ...updatedInscr[idx], ...insc }
+        } else {
+            updatedInscr.push(insc)
+            inscripcionesNuevas++
+        }
+    }
+    saveInscripciones(updatedInscr)
+
+    return {
+        sector_nombre: payload.sector_nombre,
+        sector_id: payload.sector_id,
+        fecha_exportacion: payload.fecha_exportacion,
+        exportado_por: payload.exportado_por,
+        internos_nuevos: internosNuevos,
+        internos_actualizados: (payload.internos || []).length - internosNuevos,
+        cursos_nuevos: cursosNuevos,
+        cursos_actualizados: (payload.cursos || []).length - cursosNuevos,
+        inscripciones_nuevas: inscripcionesNuevas,
+        inscripciones_actualizadas: (payload.inscripciones || []).length - inscripcionesNuevas,
+    }
+}

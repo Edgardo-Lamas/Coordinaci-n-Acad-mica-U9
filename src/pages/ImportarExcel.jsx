@@ -1,12 +1,15 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download, Trash2, Users } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download, Trash2, Users, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount, addAuditLog } from '../data/dataService';
+import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount, addAuditLog, importSectorData } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ImportarExcel() {
     const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState('excel');
+
+    // ── Tab Excel ──────────────────────────────────────────────────────────────
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [importing, setImporting] = useState(false);
@@ -16,6 +19,50 @@ export default function ImportarExcel() {
     const [hasData, setHasData] = useState(hasImportedData());
     const fileRef = useRef(null);
     const navigate = useNavigate();
+
+    // ── Tab Sector JSON ────────────────────────────────────────────────────────
+    const [sectorFile, setSectorFile] = useState(null);
+    const [sectorPayload, setSectorPayload] = useState(null);
+    const [sectorError, setSectorError] = useState('');
+    const [sectorResult, setSectorResult] = useState(null);
+    const [sectorDragover, setSectorDragover] = useState(false);
+    const sectorFileRef = useRef(null);
+
+    const processSectorFile = (f) => {
+        setSectorFile(f);
+        setSectorError('');
+        setSectorPayload(null);
+        setSectorResult(null);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (parsed.tipo !== 'exportacion_sector') {
+                    setSectorError('El archivo no es un paquete de exportación de sector válido.');
+                    return;
+                }
+                setSectorPayload(parsed);
+            } catch {
+                setSectorError('Error al leer el archivo. Verificá que sea un .json válido.');
+            }
+        };
+        reader.readAsText(f);
+    };
+
+    const handleImportSector = () => {
+        if (!sectorPayload) return;
+        try {
+            const res = importSectorData(sectorPayload);
+            setSectorResult(res);
+            setSectorPayload(null);
+            setSectorFile(null);
+            addAuditLog(user, 'IMPORTAR_SECTOR', 'Sector',
+                `Importó datos de ${res.sector_nombre}: ${res.inscripciones_nuevas} inscripciones nuevas, ${res.inscripciones_actualizadas} actualizadas`
+            );
+        } catch (err) {
+            setSectorError(err.message);
+        }
+    };
 
     const processFile = (selectedFile) => {
         setFile(selectedFile);
@@ -141,12 +188,171 @@ export default function ImportarExcel() {
         <div>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">Importar Internos desde Excel</h1>
+                    <h1 className="page-title">Importar datos</h1>
                     <p className="page-description">
-                        Carga masiva de internos. Se importan <strong>Nº ID</strong>, <strong>Apellido y Nombre</strong> y <strong>DNI</strong>.
+                        Importación de internos desde Excel y datos de sectores enviados por email.
                     </p>
                 </div>
             </div>
+
+            {/* Tabs */}
+            <div className="tabs" style={{ marginBottom: 'var(--space-6)' }}>
+                <button
+                    className={`tab ${activeTab === 'excel' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('excel')}
+                >
+                    <FileSpreadsheet size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                    Internos desde Excel
+                </button>
+                <button
+                    className={`tab ${activeTab === 'sector' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('sector')}
+                >
+                    <Building2 size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                    Datos de Sector
+                </button>
+            </div>
+
+            {/* ── TAB: Importar datos de sector ─────────────────────────────── */}
+            {activeTab === 'sector' && (
+                <div>
+                    {sectorResult ? (
+                        <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+                            <div className="card-body" style={{ textAlign: 'center' }}>
+                                <CheckCircle size={48} style={{ color: 'var(--success)', marginBottom: 16 }} />
+                                <h3 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, marginBottom: 8 }}>
+                                    Datos del Sector <strong>{sectorResult.sector_nombre}</strong> importados
+                                </h3>
+                                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginBottom: 'var(--space-4)' }}>
+                                    Exportado por <strong>{sectorResult.exportado_por}</strong> — {sectorResult.fecha_exportacion ? new Date(sectorResult.fecha_exportacion).toLocaleString('es-AR') : '—'}
+                                </p>
+                                <div style={{ display: 'flex', gap: 'var(--space-6)', justifyContent: 'center', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
+                                    {[
+                                        { label: 'Inscripciones nuevas', val: sectorResult.inscripciones_nuevas, color: 'var(--success)' },
+                                        { label: 'Inscripciones actualizadas', val: sectorResult.inscripciones_actualizadas, color: 'var(--primary-600)' },
+                                        { label: 'Cursos nuevos', val: sectorResult.cursos_nuevos, color: 'var(--success)' },
+                                        { label: 'Internos nuevos', val: sectorResult.internos_nuevos, color: 'var(--success)' },
+                                    ].map(({ label, val, color }) => (
+                                        <div key={label}>
+                                            <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color }}>{val}</div>
+                                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>{label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
+                                    <button className="btn btn-primary" onClick={() => navigate('/inscripciones')}>
+                                        Ver Inscripciones
+                                    </button>
+                                    <button className="btn btn-secondary" onClick={() => setSectorResult(null)}>
+                                        Importar otro archivo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+                                <div className="card-body">
+                                    <div
+                                        className={`upload-area ${sectorDragover ? 'dragover' : ''}`}
+                                        style={{ cursor: 'pointer' }}
+                                        onDragOver={(e) => { e.preventDefault(); setSectorDragover(true); }}
+                                        onDragLeave={() => setSectorDragover(false)}
+                                        onDrop={(e) => { e.preventDefault(); setSectorDragover(false); const f = e.dataTransfer.files[0]; if (f) processSectorFile(f); }}
+                                        onClick={() => sectorFileRef.current?.click()}
+                                    >
+                                        <Building2 size={48} className="upload-icon" />
+                                        <div className="upload-text">
+                                            Arrastrá el archivo .json del sector aquí o hacé clic para seleccionarlo
+                                        </div>
+                                        <div className="upload-hint">
+                                            El archivo es generado por el Responsable del sector usando "Exportar sector"
+                                        </div>
+                                    </div>
+                                    <input
+                                        ref={sectorFileRef}
+                                        type="file"
+                                        accept=".json"
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => { const f = e.target.files[0]; if (f) processSectorFile(f); }}
+                                    />
+                                    {sectorError && (
+                                        <div className="login-error" style={{ marginTop: 'var(--space-4)' }}>
+                                            <AlertCircle size={16} /> {sectorError}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {sectorPayload && (
+                                <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+                                    <div className="card-header">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                                            <Building2 size={20} />
+                                            <div>
+                                                <h2 className="card-title">Sector: {sectorPayload.sector_nombre}</h2>
+                                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
+                                                    Exportado por <strong>{sectorPayload.exportado_por}</strong> — {new Date(sectorPayload.fecha_exportacion).toLocaleString('es-AR')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setSectorFile(null); setSectorPayload(null); }}>
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                    <div className="card-body">
+                                        <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
+                                            {[
+                                                { label: 'Inscripciones', val: sectorPayload.inscripciones?.length ?? 0 },
+                                                { label: 'Cursos', val: sectorPayload.cursos?.length ?? 0 },
+                                                { label: 'Internos', val: sectorPayload.internos?.length ?? 0 },
+                                            ].map(({ label, val }) => (
+                                                <div key={label} style={{ textAlign: 'center', padding: 'var(--space-3) var(--space-4)', background: 'var(--gray-50)', borderRadius: 'var(--radius-sm)' }}>
+                                                    <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--primary-700)' }}>{val}</div>
+                                                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>{label}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                                            Los registros existentes serán actualizados. Los registros nuevos serán agregados. No se elimina ningún dato.
+                                        </p>
+                                    </div>
+                                    <div className="card-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+                                        <button className="btn btn-secondary" onClick={() => { setSectorFile(null); setSectorPayload(null); }}>Cancelar</button>
+                                        <button className="btn btn-primary btn-lg" onClick={handleImportSector}>
+                                            <Download size={18} /> Fusionar datos
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="card">
+                                <div className="card-header"><h2 className="card-title">¿Cómo funciona?</h2></div>
+                                <div className="card-body">
+                                    <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+                                        {[
+                                            { n: 1, title: 'Responsable exporta su sector', desc: 'Desde Mi Sector → "Exportar sector", se descarga un archivo .json con las inscripciones y calificaciones del sector.' },
+                                            { n: 2, title: 'Envío por email', desc: 'El Responsable adjunta el archivo .json al email y lo envía a Coordinación Académica.' },
+                                            { n: 3, title: 'Coordinación importa', desc: 'Coordinación carga el .json aquí. Los datos se fusionan: registros nuevos se agregan, existentes se actualizan.' },
+                                        ].map(({ n, title, desc }) => (
+                                            <div key={n} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
+                                                <span className="badge badge-info" style={{ flexShrink: 0, width: 28, justifyContent: 'center' }}>{n}</span>
+                                                <div>
+                                                    <strong>{title}</strong>
+                                                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>{desc}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* ── TAB: Importar internos desde Excel ────────────────────────── */}
+            {activeTab === 'excel' && (<>
 
             {/* Existing data banner */}
             {hasData && !result && !preview && (
@@ -395,6 +601,7 @@ export default function ImportarExcel() {
                     </div>
                 </div>
             </div>
+            </>)}
         </div>
     );
 }

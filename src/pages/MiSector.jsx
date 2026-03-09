@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones } from '../data/dataService';
-import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download } from 'lucide-react';
+import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog } from '../data/dataService';
+import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download, Upload } from 'lucide-react';
 import SearchableSelect from '../components/SearchableSelect';
 import { useState } from 'react';
 
@@ -84,6 +84,26 @@ export default function MiSector() {
         }
     };
 
+    const handleExportar = () => {
+        const datos = exportSectorData(user.sector_id, sector?.nombre || `Sector ${user.sector_id}`, user.nombre);
+        const json = JSON.stringify(datos, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const fecha = new Date().toISOString().slice(0, 10);
+        const nombreArchivo = `sector-${(sector?.nombre || user.sector_id).replace(/\s+/g, '_')}-${fecha}.json`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addAuditLog(user, 'EXPORTAR_SECTOR', 'Sector',
+            `Exportó datos del sector ${sector?.nombre}: ${datos.inscripciones.length} inscripciones, ${datos.cursos.length} cursos`
+        );
+    };
+
     const handleGenerarCertificado = (insc) => {
         const curso = CURSOS.find(c => c.id === insc.curso_id);
         const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
@@ -138,6 +158,13 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                         Panel de gestión para tu sector asignado
                     </p>
                 </div>
+                <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleExportar}
+                    title="Exportar datos del sector para enviar a Coordinación"
+                >
+                    <Upload size={16} /> Exportar sector
+                </button>
             </div>
 
             <div className="stats-grid">
