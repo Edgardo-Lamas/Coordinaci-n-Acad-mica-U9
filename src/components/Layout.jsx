@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES } from '../data/mockData';
+import { getCorrectionRequests } from '../data/dataService';
 import {
     LayoutDashboard, Users, Building2, BookOpen, ClipboardList,
     Award, Shield, Settings, LogOut, Menu, X, GraduationCap,
-    FileSpreadsheet, BarChart2, ArrowLeft
+    FileSpreadsheet, BarChart2, ArrowLeft, AlertCircle
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 
 // Rutas "raíz" donde el botón atrás no tiene sentido
 const ROOT_PATHS = ['/', '/internos', '/cursos', '/inscripciones', '/sectores',
-    '/mi-sector', '/certificados', '/reportes', '/auditoria', '/importar', '/configuracion'];
+    '/mi-sector', '/certificados', '/reportes', '/auditoria', '/importar', '/configuracion', '/correcciones'];
 
 const NAV_CONFIG = [
     {
@@ -40,6 +41,7 @@ const NAV_CONFIG = [
     {
         section: 'ADMINISTRACIÓN',
         items: [
+            { path: '/correcciones', label: 'Correcciones', icon: AlertCircle, roles: [ROLES.ADMIN, ROLES.COORDINACION, ROLES.RESPONSABLE, ROLES.JEFE], badge: true },
             { path: '/importar', label: 'Importar Excel', icon: FileSpreadsheet, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
             { path: '/auditoria', label: 'Auditoría', icon: Shield, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
             { path: '/configuracion', label: 'Configuración', icon: Settings, roles: [ROLES.ADMIN] },
@@ -52,6 +54,8 @@ export default function Layout() {
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const pendingCorrections = getCorrectionRequests().filter(r => r.estado === 'pendiente').length;
 
     const showBackButton = !ROOT_PATHS.includes(location.pathname);
 
@@ -105,6 +109,24 @@ export default function Layout() {
                                 >
                                     <item.icon className="nav-icon" size={20} />
                                     {item.label}
+                                    {item.badge && pendingCorrections > 0 && (
+                                        <span style={{
+                                            marginLeft: 'auto',
+                                            background: 'var(--danger, #dc2626)',
+                                            color: '#fff',
+                                            borderRadius: 9999,
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            minWidth: 18,
+                                            height: 18,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            padding: '0 5px',
+                                        }}>
+                                            {pendingCorrections}
+                                        </span>
+                                    )}
                                 </NavLink>
                             ))}
                         </div>

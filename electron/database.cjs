@@ -83,6 +83,23 @@ CREATE TABLE IF NOT EXISTS config (
   key TEXT PRIMARY KEY,
   value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS correction_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entidad TEXT NOT NULL,
+  registro_id TEXT NOT NULL,
+  registro_desc TEXT,
+  campo TEXT NOT NULL,
+  valor_actual TEXT,
+  valor_sugerido TEXT,
+  motivo TEXT,
+  solicitante_id INTEGER,
+  solicitante_nombre TEXT,
+  estado TEXT NOT NULL DEFAULT 'pendiente',
+  resuelto_por_nombre TEXT,
+  fecha_solicitud TEXT NOT NULL,
+  fecha_resolucion TEXT
+);
 `
 
 function initDatabase() {
@@ -214,4 +231,39 @@ const config = {
   }
 }
 
-module.exports = { initDatabase, internos, cursos, capacitadores, inscripciones, certificados, auditLog, usuarios, config }
+// ── Correction Requests ───────────────────────────────────────────────────────
+const correctionRequests = {
+  getAll: () => db.prepare('SELECT * FROM correction_requests ORDER BY fecha_solicitud DESC').all(),
+  addEntry: (entry) => {
+    const result = db.prepare(`
+      INSERT INTO correction_requests
+      (entidad, registro_id, registro_desc, campo, valor_actual, valor_sugerido, motivo,
+       solicitante_id, solicitante_nombre, estado, fecha_solicitud)
+      VALUES (@entidad, @registro_id, @registro_desc, @campo, @valor_actual, @valor_sugerido, @motivo,
+       @solicitante_id, @solicitante_nombre, @estado, @fecha_solicitud)
+    `).run(entry)
+    return result.lastInsertRowid
+  },
+  resolve: (id, resueltoPorNombre, estado, fechaResolucion) => {
+    db.prepare(`
+      UPDATE correction_requests
+      SET estado = ?, resuelto_por_nombre = ?, fecha_resolucion = ?
+      WHERE id = ?
+    `).run(estado, resueltoPorNombre, fechaResolucion, id)
+  },
+  saveAll: (records) => {
+    db.transaction((rows) => {
+      db.prepare('DELETE FROM correction_requests').run()
+      const insert = db.prepare(`
+        INSERT INTO correction_requests
+        (id, entidad, registro_id, registro_desc, campo, valor_actual, valor_sugerido, motivo,
+         solicitante_id, solicitante_nombre, estado, resuelto_por_nombre, fecha_solicitud, fecha_resolucion)
+        VALUES (@id, @entidad, @registro_id, @registro_desc, @campo, @valor_actual, @valor_sugerido, @motivo,
+         @solicitante_id, @solicitante_nombre, @estado, @resuelto_por_nombre, @fecha_solicitud, @fecha_resolucion)
+      `)
+      for (const row of rows) insert.run(row)
+    })(records)
+  }
+}
+
+module.exports = { initDatabase, internos, cursos, capacitadores, inscripciones, certificados, auditLog, usuarios, config, correctionRequests }

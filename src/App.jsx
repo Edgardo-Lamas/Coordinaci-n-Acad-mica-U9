@@ -17,6 +17,7 @@ import Certificados from './pages/Certificados';
 import Reportes from './pages/Reportes';
 import Verificar from './pages/Verificar';
 import Configuracion from './pages/Configuracion';
+import Correcciones from './pages/Correcciones';
 import { ROLES } from './data/mockData';
 
 function App() {
@@ -64,6 +65,11 @@ function App() {
             <Route path="reportes" element={
               <ProtectedRoute roles={[ROLES.ADMIN, ROLES.COORDINACION, ROLES.JEFE]}>
                 <Reportes />
+              </ProtectedRoute>
+            } />
+            <Route path="correcciones" element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.COORDINACION, ROLES.RESPONSABLE, ROLES.JEFE]}>
+                <Correcciones />
               </ProtectedRoute>
             } />
             <Route path="auditoria" element={

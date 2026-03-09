@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SECTORES } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados, updateInternoWhatsapp, addAuditLog } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados, updateInternoWhatsapp, addAuditLog, getAuditLog } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard, Clock, MessageCircle, Pencil, Check, X
+    ArrowLeft, User, Calendar, Building2, BookOpen, Award, Hash, CreditCard, Clock, MessageCircle, Pencil, Check, X, AlertCircle, History, ChevronDown, ChevronUp
 } from 'lucide-react';
+import SolicitudCorreccionModal from '../components/SolicitudCorreccionModal';
 
 export default function InternoDetalle() {
     const { id } = useParams();
@@ -17,6 +18,8 @@ export default function InternoDetalle() {
     const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
     const certificadosList = getCertificados();
     const [toast, setToast] = useState(null);
+    const [corrModalData, setCorrModalData] = useState(null); // { inscripcion, cursoNombre }
+    const [expandedHistorial, setExpandedHistorial] = useState(null); // inscripcion id
     const [waContacto, setWaContacto] = useState(() => {
         const found = getInternos().find(i => i.numero_interno === id);
         return found?.whatsapp_contacto || '';
@@ -106,6 +109,29 @@ export default function InternoDetalle() {
             case 'en_curso': return 'En Curso';
             default: return cal;
         }
+    };
+
+    // Audit entries related to this interno's inscripciones
+    const auditEntries = getAuditLog().filter(entry => {
+        if (!entry.entidad || !entry.detalle) return false;
+        if (entry.entidad !== 'Inscripcion') return false;
+        try {
+            const parsed = JSON.parse(entry.detalle);
+            return parsed?.cambios?.length > 0;
+        } catch (_) {
+            return false;
+        }
+    });
+
+    const getAuditForInscripcion = (inscId) => {
+        // Match audit entries that mention this inscripcion by id in detalle or just belong to this interno
+        return auditEntries.filter(e => {
+            try {
+                const parsed = JSON.parse(e.detalle);
+                // Best effort: check if the entry's detalle references the inscripcion id
+                return String(e.detalle).includes(String(inscId)) || e.detalle.includes(interno.nombre_completo);
+            } catch (_) { return false; }
+        });
     };
 
     return (
@@ -244,16 +270,19 @@ export default function InternoDetalle() {
                                     <th>Inscripción</th>
                                     <th>Calificación</th>
                                     <th>Certificado</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {cursosDelInterno.map(item => {
                                     const cert = certificadosList.find(c => c.inscripcion_id === item.id);
-                                    // Responsable/Cargador solo cambia estados de su propio sector
                                     const puedeEditar = !isResponsable() && !isCargador()
                                         ? true
                                         : item.curso?.sector_id === user.sector_id;
+                                    const historialEntries = getAuditForInscripcion(item.id);
+                                    const historialOpen = expandedHistorial === item.id;
                                     return (
+                                    <>
                                     <tr key={item.id}>
                                         <td style={{ fontWeight: 600 }}>{item.curso?.nombre || '—'}</td>
                                         <td>{item.curso?.tipo || '—'}</td>
@@ -298,7 +327,57 @@ export default function InternoDetalle() {
                                                 </span>
                                             )}
                                         </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                                {isCargador() && puedeEditar && (
+                                                    <button
+                                                        className="btn btn-ghost btn-sm btn-icon"
+                                                        title="Solicitar corrección"
+                                                        onClick={() => setCorrModalData({ inscripcion: item, cursoNombre: item.curso?.nombre || '—' })}
+                                                    >
+                                                        <AlertCircle size={15} style={{ color: 'var(--warning)' }} />
+                                                    </button>
+                                                )}
+                                                {historialEntries.length > 0 && (
+                                                    <button
+                                                        className="btn btn-ghost btn-sm btn-icon"
+                                                        title="Ver historial de cambios"
+                                                        onClick={() => setExpandedHistorial(historialOpen ? null : item.id)}
+                                                    >
+                                                        {historialOpen ? <ChevronUp size={15} /> : <History size={15} />}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
                                     </tr>
+                                    {historialOpen && (
+                                        <tr key={`hist-${item.id}`}>
+                                            <td colSpan={9} style={{ background: 'var(--gray-50)', padding: 'var(--space-3) var(--space-4)' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 'var(--text-xs)', color: 'var(--gray-500)', fontWeight: 600 }}>
+                                                    <History size={13} /> Historial de cambios
+                                                </div>
+                                                {historialEntries.map(entry => {
+                                                    let parsed = null;
+                                                    try { parsed = JSON.parse(entry.detalle); } catch (_) {}
+                                                    return (
+                                                        <div key={entry.id} style={{ fontSize: 'var(--text-xs)', marginBottom: 6 }}>
+                                                            <span style={{ color: 'var(--gray-400)' }}>
+                                                                {new Date(entry.fecha).toLocaleString('es-AR')} · {entry.usuario_nombre}
+                                                            </span>
+                                                            {parsed?.cambios?.map((c, i) => (
+                                                                <div key={i} style={{ marginTop: 2, paddingLeft: 12 }}>
+                                                                    <strong>{c.campo}</strong>: <span style={{ color: 'var(--danger)', textDecoration: 'line-through' }}>{c.antes || '(vacío)'}</span>
+                                                                    {' → '}
+                                                                    <span style={{ color: 'var(--success)' }}>{c.despues || '(vacío)'}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </>
                                     );
                                 })}
                             </tbody>
@@ -316,6 +395,19 @@ export default function InternoDetalle() {
                     </div>
                 )}
             </div>
+
+            {corrModalData && (
+                <SolicitudCorreccionModal
+                    inscripcion={corrModalData.inscripcion}
+                    cursoNombre={corrModalData.cursoNombre}
+                    internoNombre={interno.nombre_completo}
+                    onClose={() => setCorrModalData(null)}
+                    onSent={() => {
+                        setCorrModalData(null);
+                        showToast('Solicitud enviada al responsable');
+                    }}
+                />
+            )}
 
             {toast && (
                 <div style={{

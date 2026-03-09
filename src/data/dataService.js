@@ -18,7 +18,7 @@ function syncToSQLite(tableName, records) {
 export async function initFromSQLite() {
     if (!IS_ELECTRON) return
     try {
-        const [internos, cursos, capacitadores, inscripciones, certificados, auditLog, usuarios] =
+        const [internos, cursos, capacitadores, inscripciones, certificados, auditLog, usuarios, corrections] =
             await Promise.all([
                 window.electronAPI.db.getAll('internos'),
                 window.electronAPI.db.getAll('cursos'),
@@ -27,6 +27,7 @@ export async function initFromSQLite() {
                 window.electronAPI.db.getAll('certificados'),
                 window.electronAPI.db.getAll('audit_log'),
                 window.electronAPI.db.getAll('usuarios'),
+                window.electronAPI.db.getAll('correction_requests'),
             ])
 
         if (internos.length)      localStorage.setItem(STORAGE_KEY,       JSON.stringify(internos))
@@ -36,6 +37,7 @@ export async function initFromSQLite() {
         if (certificados.length)  localStorage.setItem(CERTIFICADOS_KEY,   JSON.stringify(certificados))
         if (auditLog.length)      localStorage.setItem(AUDIT_KEY,          JSON.stringify(auditLog))
         if (usuarios.length)      localStorage.setItem(USUARIOS_KEY,       JSON.stringify(usuarios))
+        if (corrections.length)   localStorage.setItem('ga_u9_correction_requests', JSON.stringify(corrections))
 
         const whatsapp = await window.electronAPI.db.getConfig('whatsapp_number')
         if (whatsapp) localStorage.setItem(WHATSAPP_KEY, whatsapp)
@@ -402,17 +404,20 @@ export function getAuditLog() {
  * @param {string} entidad - Ej: 'Certificado', 'Inscripcion', 'Curso'
  * @param {string} detalle - Descripción legible de la acción
  */
-export function addAuditLog(usuario, accion, entidad, detalle) {
+export function addAuditLog(usuario, accion, entidad, detalle, cambios = null) {
     try {
         const current = getAuditLog();
         const maxId = current.reduce((max, l) => Math.max(max, l.id || 0), 0);
+        const detalleGuardado = cambios
+            ? JSON.stringify({ descripcion: detalle, cambios })
+            : detalle;
         const entry = {
             id: maxId + 1,
             usuario_id: usuario?.id || 0,
             usuario_nombre: usuario?.nombre || 'Sistema',
             accion,
             entidad,
-            detalle,
+            detalle: detalleGuardado,
             fecha: new Date().toISOString(),
             ip: '127.0.0.1',
         };
@@ -424,6 +429,19 @@ export function addAuditLog(usuario, accion, entidad, detalle) {
     } catch (e) {
         console.warn('Error saving audit log:', e);
     }
+}
+
+/**
+ * Computa las diferencias entre dos versiones de un objeto.
+ * Ignora campos técnicos internos.
+ * @returns {Array} [{campo, antes, despues}]
+ */
+export function computeDiff(antes, despues) {
+    if (!antes || !despues) return []
+    const ignorar = ['id', 'fecha_carga', 'usuario_cargador_id']
+    return Object.keys(despues)
+        .filter(k => !ignorar.includes(k) && String(antes[k] ?? '') !== String(despues[k] ?? ''))
+        .map(k => ({ campo: k, antes: antes[k] ?? '', despues: despues[k] ?? '' }))
 }
 
 // ═══════════════════════════════════════════
@@ -448,5 +466,69 @@ export function saveUsuarios(usuarios) {
         syncToSQLite('usuarios', usuarios)
     } catch (e) {
         console.error('Error saving usuarios to localStorage:', e);
+    }
+}
+
+// ═══════════════════════════════════════════
+// SOLICITUDES DE CORRECCIÓN
+// ═══════════════════════════════════════════
+
+const CORRECTIONS_KEY = 'ga_u9_correction_requests'
+
+export function getCorrectionRequests() {
+    try {
+        const stored = localStorage.getItem(CORRECTIONS_KEY)
+        if (stored) return JSON.parse(stored)
+    } catch (e) {
+        console.warn('Error reading correction_requests from localStorage:', e)
+    }
+    return []
+}
+
+export function saveCorrectionRequests(requests) {
+    try {
+        localStorage.setItem(CORRECTIONS_KEY, JSON.stringify(requests))
+        syncToSQLite('correction_requests', requests)
+    } catch (e) {
+        console.error('Error saving correction_requests to localStorage:', e)
+    }
+}
+
+/**
+ * CARGADOR crea una solicitud de corrección para un registro.
+ */
+export function addCorrectionRequest(entry) {
+    const current = getCorrectionRequests()
+    const maxId = current.reduce((max, r) => Math.max(max, r.id || 0), 0)
+    const nuevo = {
+        id: maxId + 1,
+        ...entry,
+        estado: 'pendiente',
+        fecha_solicitud: new Date().toISOString(),
+    }
+    const updated = [nuevo, ...current]
+    saveCorrectionRequests(updated)
+    if (IS_ELECTRON) {
+        window.electronAPI.db.addCorrectionRequest(nuevo)
+            .catch(err => console.warn('[SQLite addCorrectionRequest]', err))
+    }
+    return nuevo
+}
+
+/**
+ * RESPONSABLE/ADMIN resuelve o rechaza una solicitud.
+ */
+export function resolveCorrectionRequest(id, resolvedByNombre, estado) {
+    const fechaResolucion = new Date().toISOString()
+    const current = getCorrectionRequests()
+    const updated = current.map(r =>
+        r.id === id
+            ? { ...r, estado, resuelto_por_nombre: resolvedByNombre, fecha_resolucion: fechaResolucion }
+            : r
+    )
+    saveCorrectionRequests(updated)
+    if (IS_ELECTRON) {
+        window.electronAPI.db.resolveCorrectionRequest(id, resolvedByNombre, estado, fechaResolucion)
+            .catch(err => console.warn('[SQLite resolveCorrectionRequest]', err))
     }
 }

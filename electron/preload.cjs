@@ -10,5 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     addAuditEntry: (entry) => ipcRenderer.invoke('db:addAuditEntry', entry),
     getConfig: (key) => ipcRenderer.invoke('db:getConfig', key),
     setConfig: (key, value) => ipcRenderer.invoke('db:setConfig', key, value),
+    addCorrectionRequest: (entry) => ipcRenderer.invoke('db:addCorrectionRequest', entry),
+    resolveCorrectionRequest: (id, resueltoPorNombre, estado, fechaResolucion) =>
+      ipcRenderer.invoke('db:resolveCorrectionRequest', id, resueltoPorNombre, estado, fechaResolucion),
   }
 })
