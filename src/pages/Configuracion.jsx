@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES, ROLE_LABELS, SECTORES } from '../data/mockData';
 import { getUsuarios, saveUsuarios } from '../data/dataService';
-import { Settings, Plus, Pencil, UserX, UserCheck, X, User, Eye, EyeOff } from 'lucide-react';
+import { Settings, Plus, Pencil, UserX, UserCheck, X, User, Eye, EyeOff, Trash2 } from 'lucide-react';
 
 const ROLE_BADGE = {
     [ROLES.ADMIN]: 'badge-danger',
@@ -32,6 +32,7 @@ export default function Configuracion() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [filterRol, setFilterRol] = useState('');
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     const rolesNecesitanSector = ROLES_CON_SECTOR.includes(form.rol);
 
@@ -107,6 +108,13 @@ export default function Configuracion() {
         );
         saveUsuarios(updated);
         setUsuarios(updated);
+    };
+
+    const handleDelete = (userId) => {
+        const updated = usuarios.filter(u => u.id !== userId);
+        saveUsuarios(updated);
+        setUsuarios(updated);
+        setConfirmDeleteId(null);
     };
 
     const getInitials = (name) =>
@@ -211,9 +219,18 @@ export default function Configuracion() {
                                             onClick={() => handleToggleActivo(u.id)}
                                             disabled={u.id === currentUser.id}
                                             title={u.activo ? 'Desactivar usuario' : 'Activar usuario'}
-                                            style={{ color: u.activo ? 'var(--error)' : 'var(--success)' }}
+                                            style={{ color: u.activo ? 'var(--warning)' : 'var(--success)' }}
                                         >
                                             {u.activo ? <UserX size={15} /> : <UserCheck size={15} />}
+                                        </button>
+                                        <button
+                                            className="btn btn-ghost btn-icon btn-sm"
+                                            onClick={() => setConfirmDeleteId(u.id)}
+                                            disabled={u.id === currentUser.id}
+                                            title="Eliminar usuario"
+                                            style={{ color: 'var(--danger)' }}
+                                        >
+                                            <Trash2 size={15} />
                                         </button>
                                     </div>
                                 </td>
@@ -222,6 +239,40 @@ export default function Configuracion() {
                     </tbody>
                 </table>
             </div>
+
+            {/* Modal confirmar eliminación */}
+            {confirmDeleteId && (() => {
+                const u = usuarios.find(x => x.id === confirmDeleteId);
+                return (
+                    <div className="modal-overlay" onClick={() => setConfirmDeleteId(null)}>
+                        <div className="modal" style={{ maxWidth: 400, width: '95%' }} onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Trash2 size={18} style={{ color: 'var(--danger)' }} />
+                                    Eliminar usuario
+                                </h2>
+                                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setConfirmDeleteId(null)}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="modal-body" style={{ padding: 'var(--space-6)' }}>
+                                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginBottom: 8 }}>
+                                    ¿Estás seguro de que querés eliminar a <strong>{u?.nombre}</strong>?
+                                </p>
+                                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
+                                    Esta acción no se puede deshacer.
+                                </p>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDeleteId(null)}>Cancelar</button>
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(confirmDeleteId)}>
+                                    <Trash2 size={14} /> Eliminar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Modal crear/editar */}
             {showForm && (
