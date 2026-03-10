@@ -5,7 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import html2canvas from 'html2canvas';
 
 const PRINT_STYLE_ID = 'cert-print-styles';
-const VERIFICAR_BASE_URL = 'https://ga.up9laplata.gob.ar/verificar/';
+const VERIFICAR_BASE_URL = 'https://edgardo-lamas.github.io/Coordinaci-n-Acad-mica-U9/verificar/';
 
 function injectPrintStyles() {
     if (document.getElementById(PRINT_STYLE_ID)) return;
@@ -140,7 +140,7 @@ function CertificadoDocument({ interno, curso, inscripcion, capacitador, codigo,
         ? fmtDate(fechaEmision)
         : new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    const verificarUrl = `${VERIFICAR_BASE_URL}${codigo}`;
+    const verificarUrl = `${VERIFICAR_BASE_URL}?codigo=${codigo}`;
 
     const page = {
         width: isPrint ? '297mm' : '100%',

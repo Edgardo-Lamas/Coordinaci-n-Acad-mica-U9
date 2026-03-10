@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verificación de Certificados — UP N° 9 La Plata</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #1e3a6e;
+            color: white;
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        header svg { flex-shrink: 0; }
+        .header-text .sup {
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+        .header-text .title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 16px 48px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e5e7eb;
+            width: 100%;
+            max-width: 640px;
+            overflow: hidden;
+        }
+
+        /* Estado: buscando */
+        .loading { padding: 48px 24px; text-align: center; color: #6b7280; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #1e3a6e;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Estado: sin código */
+        .no-code { padding: 48px 24px; text-align: center; }
+        .no-code h2 { font-size: 18px; color: #374151; margin-bottom: 12px; }
+        .no-code p { font-size: 14px; color: #6b7280; margin-bottom: 20px; }
+        .input-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .input-row input {
+            font-family: monospace;
+            font-size: 14px;
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            width: 280px;
+            outline: none;
+        }
+        .input-row input:focus { border-color: #1e3a6e; box-shadow: 0 0 0 3px rgba(30,58,110,0.1); }
+        .btn-buscar {
+            padding: 10px 20px;
+            background: #1e3a6e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-buscar:hover { background: #162d58; }
+
+        /* Estado: no encontrado */
+        .not-found { padding: 48px 24px; text-align: center; }
+        .not-found h2 { font-size: 20px; font-weight: 700; color: #1f2937; margin-bottom: 8px; }
+        .not-found p { color: #6b7280; font-size: 14px; }
+
+        /* Estado: válido */
+        .valid-banner {
+            background: #f0fdf4;
+            border: 2px solid #16a34a;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 24px;
+            border-radius: 8px;
+        }
+        .valid-banner .label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #15803d;
+        }
+        .valid-banner .sublabel {
+            font-size: 13px;
+            color: #166534;
+        }
+        .fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            padding: 0 24px 24px;
+        }
+        .field { margin-bottom: 4px; }
+        .field-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9ca3af;
+            margin-bottom: 2px;
+        }
+        .field-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .field-value.mono { font-family: monospace; }
+        .field-full { grid-column: 1 / -1; }
+
+        /* Estado: pendiente */
+        .pending { padding: 48px 24px; text-align: center; }
+        .pending h2 { font-size: 20px; font-weight: 700; color: #1f2937; margin-bottom: 8px; }
+        .pending p { color: #6b7280; font-size: 14px; }
+
+        footer {
+            text-align: center;
+            font-size: 12px;
+            color: #9ca3af;
+            padding: 24px 16px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+        <div class="header-text">
+            <div class="sup">Ministerio de Justicia — Prov. Buenos Aires</div>
+            <div class="title">Unidad Penitenciaria N° 9 — La Plata · Verificación de Certificados</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card" id="card">
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Verificando certificado...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>Sistema de Gestión Académica — UP N° 9 La Plata</footer>
+
+    <script>
+        const DATA_URL = '../certificados-publicos.json';
+
+        function fmtDate(str) {
+            if (!str) return '—';
+            const [y, m, d] = str.split('-');
+            return new Date(+y, +m - 1, +d).toLocaleDateString('es-AR', {
+                day: '2-digit', month: 'long', year: 'numeric'
+            });
+        }
+
+        function renderField(label, value, mono, full) {
+            return `<div class="field${full ? ' field-full' : ''}">
+                <div class="field-label">${label}</div>
+                <div class="field-value${mono ? ' mono' : ''}">${value || '—'}</div>
+            </div>`;
+        }
+
+        function renderValid(cert) {
+            return `
+                <div class="valid-banner">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <div>
+                        <div class="label">CERTIFICADO VÁLIDO</div>
+                        <div class="sublabel">Emitido oficialmente por la Coordinación Académica — UP N° 9 La Plata</div>
+                    </div>
+                </div>
+                <div class="fields">
+                    ${renderField('Código', cert.codigo, true)}
+                    ${renderField('Fecha de emisión', fmtDate(cert.fecha_emision))}
+                    ${renderField('Nombre', cert.nombre_interno)}
+                    ${renderField('DNI', cert.dni_interno ? 'N° ' + cert.dni_interno : '—')}
+                    ${renderField('Curso', cert.curso_nombre)}
+                    ${renderField('Tipo', cert.curso_tipo)}
+                    ${renderField('Carga horaria', cert.curso_carga_horaria ? cert.curso_carga_horaria + ' horas' : '—')}
+                    ${renderField('Sector', cert.sector_nombre)}
+                    ${renderField('Período',
+                        cert.fecha_inicio_curso && cert.fecha_fin_curso
+                            ? fmtDate(cert.fecha_inicio_curso) + ' — ' + fmtDate(cert.fecha_fin_curso)
+                            : '—'
+                    )}
+                    ${renderField('Hash de integridad', cert.hash_integridad, true, true)}
+                </div>
+            `;
+        }
+
+        function renderNotFound(codigo) {
+            return `<div class="not-found">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 16px;display:block">
+                    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                <h2>Certificado no encontrado</h2>
+                <p>No existe ningún certificado con el código <strong>${codigo}</strong>.</p>
+                <p style="margin-top:8px;font-size:13px;color:#9ca3af">Verifique que el código sea correcto o que el certificado haya sido emitido.</p>
+            </div>`;
+        }
+
+        function renderNoCode() {
+            return `<div class="no-code">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1e3a6e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 16px;display:block;opacity:0.4">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+                <h2>Verificar certificado</h2>
+                <p>Ingrese el código del certificado para verificar su autenticidad.</p>
+                <div class="input-row" style="margin-top:16px">
+                    <input type="text" id="codigoInput" placeholder="Ej: CERT-2025-0001" />
+                    <button class="btn-buscar" onclick="buscarPorInput()">Verificar</button>
+                </div>
+            </div>`;
+        }
+
+        function buscarPorInput() {
+            const val = document.getElementById('codigoInput')?.value?.trim();
+            if (val) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('codigo', val);
+                window.location.href = url.toString();
+            }
+        }
+
+        async function main() {
+            const card = document.getElementById('card');
+            const params = new URLSearchParams(window.location.search);
+            const codigo = params.get('codigo')?.trim();
+
+            if (!codigo) {
+                card.innerHTML = renderNoCode();
+                return;
+            }
+
+            try {
+                const res = await fetch(DATA_URL + '?t=' + Date.now());
+                if (!res.ok) throw new Error('No se pudo cargar el registro de certificados.');
+                const data = await res.json();
+                const cert = (data.certificados || []).find(c => c.codigo === codigo);
+
+                if (!cert) {
+                    card.innerHTML = renderNotFound(codigo);
+                } else {
+                    card.innerHTML = renderValid(cert);
+                }
+            } catch (err) {
+                card.innerHTML = renderNotFound(codigo);
+            }
+        }
+
+        main();
+
+        // Enter key en el input
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const inp = document.getElementById('codigoInput');
+                if (inp && document.activeElement === inp) buscarPorInput();
+            }
+        });
+    </script>
+</body>
+</html>

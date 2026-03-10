@@ -6,7 +6,7 @@ import {
     getInscripciones, getCursos, getInternos, getCapacitadores,
     getWhatsappConfig, saveWhatsappConfig, addAuditLog
 } from '../data/dataService';
-import { Award, CheckCircle, Clock, MessageCircle, Printer, Settings, Download } from 'lucide-react';
+import { Award, CheckCircle, Clock, MessageCircle, Printer, Settings, Download, Globe } from 'lucide-react';
 import CertificadoModal from '../components/CertificadoModal';
 import { exportCertificados } from '../utils/exportExcel';
 
@@ -71,6 +71,37 @@ export default function Certificados() {
         if (certEmitido) setPreviewCert(certEmitido);
     };
 
+    const handlePublicar = () => {
+        const certificadosPublicos = emitidos.map(cert => ({
+            codigo: cert.codigo,
+            hash_integridad: cert.hash_integridad || '',
+            fecha_emision: cert.fecha_emision || '',
+            nombre_interno: cert.interno?.nombre_completo || '',
+            dni_interno: cert.interno?.dni || '',
+            curso_nombre: cert.curso?.nombre || '',
+            curso_tipo: cert.curso?.tipo || '',
+            curso_carga_horaria: cert.curso?.carga_horaria || '',
+            fecha_inicio_curso: cert.inscripcion?.fecha_inicio_curso || '',
+            fecha_fin_curso: cert.inscripcion?.fecha_fin_curso || '',
+            sector_nombre: cert.sector?.nombre || '',
+        }));
+        const payload = {
+            version: '1.0',
+            actualizado: new Date().toISOString(),
+            certificados: certificadosPublicos,
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'certificados-publicos.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        addAuditLog(user, 'PUBLICAR_CERTIFICADOS', 'Certificado', `Exportó ${certificadosPublicos.length} certificado(s) para verificación pública`);
+    };
+
     const handleSaveWhatsapp = () => {
         saveWhatsappConfig(whatsappNumber);
         setShowWhatsappConfig(false);
@@ -107,6 +138,15 @@ export default function Certificados() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+                    {canEmit && emitidos.length > 0 && (
+                        <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={handlePublicar}
+                            title="Descarga certificados-publicos.json para subir a GitHub Pages"
+                        >
+                            <Globe size={16} /> Publicar para verificación
+                        </button>
+                    )}
                     {emitidos.length > 0 && (
                         <button
                             className="btn btn-ghost btn-sm"
