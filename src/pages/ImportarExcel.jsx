@@ -298,6 +298,7 @@ export default function ImportarExcel() {
                                         { label: 'Inscripciones actualizadas', val: sectorResult.inscripciones_actualizadas, color: 'var(--primary-600)' },
                                         { label: 'Cursos nuevos', val: sectorResult.cursos_nuevos, color: 'var(--success)' },
                                         { label: 'Internos nuevos', val: sectorResult.internos_nuevos, color: 'var(--success)' },
+                                        ...(sectorResult.reconciliados > 0 ? [{ label: 'Reconciliados', val: sectorResult.reconciliados, color: 'var(--warning)' }] : []),
                                     ].map(({ label, val, color }) => (
                                         <div key={label}>
                                             <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color }}>{val}</div>
@@ -305,6 +306,12 @@ export default function ImportarExcel() {
                                         </div>
                                     ))}
                                 </div>
+                                {sectorResult.reconciliados > 0 && (
+                                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--warning)', marginBottom: 'var(--space-4)' }}>
+                                        Se actualizaron {sectorResult.reconciliados} interno(s) registrados con DNI provisional — ahora tienen su número de interno real.
+                                        {sectorResult.inscripciones_reconciliadas > 0 && ` (${sectorResult.inscripciones_reconciliadas} inscripción(es) también actualizadas)`}
+                                    </p>
+                                )}
                                 <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
                                     <button className="btn btn-primary" onClick={() => navigate('/inscripciones')}>
                                         Ver Inscripciones

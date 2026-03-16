@@ -671,6 +671,10 @@ export function importSectorData(payload) {
     }
     saveInscripciones(updatedInscr)
 
+    // Reconciliar internos pendientes contra los ya existentes con número real
+    const referencia = getInternos().filter(i => !i.pendiente_reconciliacion && i.dni && i.numero_interno)
+    const recon = reconciliarInternos(referencia)
+
     return {
         sector_nombre: payload.sector_nombre,
         sector_id: payload.sector_id,
@@ -682,5 +686,7 @@ export function importSectorData(payload) {
         cursos_actualizados: (payload.cursos || []).length - cursosNuevos,
         inscripciones_nuevas: inscripcionesNuevas,
         inscripciones_actualizadas: (payload.inscripciones || []).length - inscripcionesNuevas,
+        reconciliados: recon.reconciliados,
+        inscripciones_reconciliadas: recon.inscripcionesActualizadas,
     }
 }
