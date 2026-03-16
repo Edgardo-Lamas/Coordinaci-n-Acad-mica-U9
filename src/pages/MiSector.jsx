@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog } from '../data/dataService';
-import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download, Upload } from 'lucide-react';
-import SearchableSelect from '../components/SearchableSelect';
+import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog, addCorrectionRequest } from '../data/dataService';
+import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download, Upload, Flag } from 'lucide-react';
 import { useState } from 'react';
 
 export default function MiSector() {
@@ -15,7 +14,9 @@ export default function MiSector() {
     const [activeTab, setActiveTab] = useState('internos');
     const [showFormInscripcion, setShowFormInscripcion] = useState(false);
     const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
-    const [newInsc, setNewInsc] = useState({ interno_nro: '', curso_id: '' });
+    const [newInsc, setNewInsc] = useState({ interno_nro: '', curso_id: '', nombre_manual: '' });
+    const [flagModal, setFlagModal] = useState(null); // { insc, motivo }
+    const [flagEnviada, setFlagEnviada] = useState(null); // id de inscripción con bandera enviada
 
     const sector = SECTORES.find(s => s.id === user.sector_id);
     const sectorInternos = INTERNOS.filter(i => i.sector_actual === user.sector_id && i.estado === 'activo');
@@ -29,15 +30,33 @@ export default function MiSector() {
         c.estado === ESTADOS_CURSO.EN_CURSO || c.estado === ESTADOS_CURSO.APROBADO
     );
 
-    const internosDisponibles = INTERNOS.filter(i => i.estado === 'activo');
-
     const handleCreateInscripcion = (e) => {
         e.preventDefault();
         const cursoId = Number(newInsc.curso_id);
         const curso = CURSOS.find(c => c.id === cursoId);
+        const nroInterno = newInsc.interno_nro.trim();
+
+        // Si el interno no existe localmente, registrarlo con el nombre ingresado
+        const allInternos = getInternos();
+        const yaExiste = allInternos.find(i => String(i.numero_interno) === String(nroInterno));
+        if (!yaExiste && newInsc.nombre_manual.trim()) {
+            saveInternos([...allInternos, {
+                numero_interno: nroInterno,
+                nombre_completo: newInsc.nombre_manual.trim(),
+                estado: 'activo',
+                sector_actual: user.sector_id,
+            }]);
+        } else if (yaExiste && curso?.sector_id) {
+            saveInternos(allInternos.map(i =>
+                String(i.numero_interno) === String(nroInterno)
+                    ? { ...i, sector_actual: curso.sector_id }
+                    : i
+            ));
+        }
+
         const nuevaCarga = {
             id: inscripcionesList.length + 1,
-            interno_nro: newInsc.interno_nro,
+            interno_nro: nroInterno,
             curso_id: cursoId,
             calificacion: 'en_curso',
             observaciones: '',
@@ -51,19 +70,8 @@ export default function MiSector() {
         setInscripcionesList(updatedInsc);
         saveInscripciones(updatedInsc);
 
-        // Assign the interno to the course's sector
-        if (curso?.sector_id) {
-            const allInternos = getInternos();
-            const updated = allInternos.map(i =>
-                i.numero_interno === newInsc.interno_nro
-                    ? { ...i, sector_actual: curso.sector_id }
-                    : i
-            );
-            saveInternos(updated);
-        }
-
         setShowFormInscripcion(false);
-        setNewInsc({ interno_nro: '', curso_id: '' });
+        setNewInsc({ interno_nro: '', curso_id: '', nombre_manual: '' });
     };
 
     const getCalificacionBadge = (cal) => {
@@ -82,6 +90,26 @@ export default function MiSector() {
             case 'en_curso': return 'En Curso';
             default: return cal;
         }
+    };
+
+    const handleEnviarBandera = () => {
+        if (!flagModal) return;
+        const { insc, motivo } = flagModal;
+        const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
+        const curso = CURSOS.find(c => c.id === insc.curso_id);
+        addCorrectionRequest({
+            registro_id: insc.id,
+            registro_desc: `${interno?.nombre_completo || `Interno #${insc.interno_nro}`} — ${curso?.nombre || `Curso #${insc.curso_id}`}`,
+            campo: 'eliminar_inscripcion',
+            valor_actual: insc.calificacion || '',
+            valor_propuesto: '',
+            motivo: motivo || 'Sin especificar',
+            solicitante_nombre: user.nombre,
+            solicitante_id: user.id,
+        });
+        addAuditLog(user, 'SOLICITAR_CORRECCION', 'Inscripción', `Bandera enviada para inscripción #${insc.id}: ${interno?.nombre_completo} — ${curso?.nombre}`);
+        setFlagEnviada(insc.id);
+        setFlagModal(null);
     };
 
     const handleExportar = () => {
@@ -344,6 +372,14 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                                                             <Download size={16} />
                                                         </button>
                                                     )}
+                                                    <button
+                                                        className="btn btn-ghost btn-icon btn-sm"
+                                                        style={{ color: flagEnviada === insc.id ? 'var(--gray-400)' : '#dc2626' }}
+                                                        onClick={() => flagEnviada !== insc.id && setFlagModal({ insc, motivo: '' })}
+                                                        title={flagEnviada === insc.id ? 'Bandera ya enviada' : 'Reportar error a Coordinación'}
+                                                    >
+                                                        <Flag size={16} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -377,18 +413,44 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                                     Cargador: <strong>{user.nombre}</strong> ({user.rolLabel})
                                 </p>
                                 <div className="form-group">
-                                    <label className="form-label">Interno *</label>
-                                    <SearchableSelect
-                                        options={internosDisponibles.map(i => ({
-                                            value: i.numero_interno,
-                                            label: `#${i.numero_interno} — ${i.nombre_completo}`,
-                                            sublabel: i.dni ? `DNI ${i.dni}` : null
-                                        }))}
+                                    <label className="form-label">Número de interno *</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Ej: 12345"
                                         value={newInsc.interno_nro}
-                                        onChange={val => setNewInsc({ ...newInsc, interno_nro: val })}
-                                        placeholder="Escribí nombre o Nº de interno..."
+                                        onChange={e => setNewInsc({ ...newInsc, interno_nro: e.target.value, nombre_manual: '' })}
                                         required
+                                        autoFocus
                                     />
+                                    {(() => {
+                                        const nro = newInsc.interno_nro.trim();
+                                        if (!nro) return null;
+                                        const encontrado = INTERNOS.find(i => String(i.numero_interno) === String(nro));
+                                        if (encontrado) {
+                                            return (
+                                                <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 6, background: 'var(--success-50, #f0fdf4)', border: '1px solid var(--success-200, #bbf7d0)', fontSize: 'var(--text-sm)', color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <span style={{ fontSize: 16 }}>✓</span>
+                                                    <span><strong>{encontrado.nombre_completo}</strong>{encontrado.dni ? ` · DNI ${encontrado.dni}` : ''}</span>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <div style={{ marginTop: 8 }}>
+                                                <div style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+                                                    Interno no registrado localmente — ingresá el nombre:
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    placeholder="Apellido y nombre completo"
+                                                    value={newInsc.nombre_manual}
+                                                    onChange={e => setNewInsc({ ...newInsc, nombre_manual: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Curso *</label>
@@ -408,6 +470,47 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                                 <button type="submit" className="btn btn-primary">Cargar Inscripción</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal bandera de error */}
+            {flagModal && (
+                <div className="modal-overlay">
+                    <div className="modal" style={{ maxWidth: 420 }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#dc2626' }}>
+                                <Flag size={18} /> Reportar error a Coordinación
+                            </h2>
+                            <button className="modal-close" onClick={() => setFlagModal(null)}>✕</button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginBottom: 'var(--space-4)' }}>
+                                Esta inscripción será marcada para revisión. Coordinación podrá eliminarla si corresponde.
+                                <strong> Vos no podés eliminarla directamente.</strong>
+                            </p>
+                            <div className="form-group">
+                                <label className="form-label">Motivo del error</label>
+                                <textarea
+                                    className="form-input"
+                                    rows={3}
+                                    placeholder="Ej: Inscripción duplicada, interno equivocado, curso incorrecto..."
+                                    value={flagModal.motivo}
+                                    onChange={e => setFlagModal(f => ({ ...f, motivo: e.target.value }))}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary" onClick={() => setFlagModal(null)}>Cancelar</button>
+                            <button
+                                className="btn btn-danger"
+                                onClick={handleEnviarBandera}
+                                disabled={!flagModal.motivo.trim()}
+                            >
+                                <Flag size={16} /> Enviar bandera
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

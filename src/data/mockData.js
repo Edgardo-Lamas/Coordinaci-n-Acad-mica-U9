@@ -82,29 +82,93 @@ export const DEMO_USERS = [
   // Responsables de sector
   {
     id: 5,
-    email: 'resp.agora@sistema.gob.ar',
-    password: 'resp123',
-    nombre: 'Roberto Díaz',
+    email: 'resp.agora@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable AGORA',
     rol: ROLES.RESPONSABLE,
     sector_id: 1,
     activo: true
   },
   {
     id: 6,
-    email: 'resp.ceusta@sistema.gob.ar',
-    password: 'resp123',
-    nombre: 'Laura Fernández',
+    email: 'resp.ceusta@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable CEUSTA',
     rol: ROLES.RESPONSABLE,
     sector_id: 2,
     activo: true
   },
   {
     id: 7,
-    email: 'resp.talleres@sistema.gob.ar',
-    password: 'resp123',
-    nombre: 'Pedro Martínez',
+    email: 'resp.talleres@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Talleres 404',
     rol: ROLES.RESPONSABLE,
     sector_id: 3,
+    activo: true
+  },
+  // Responsables sectores 4-10 (producción)
+  {
+    id: 28,
+    email: 'resp.iglesia@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Pabellón Iglesia',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 4,
+    activo: true
+  },
+  {
+    id: 29,
+    email: 'resp.manso@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Juana Manso',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 5,
+    activo: true
+  },
+  {
+    id: 30,
+    email: 'resp.freire@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Centro Cultural Freire',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 6,
+    activo: true
+  },
+  {
+    id: 31,
+    email: 'resp.tortura@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Comité por la Tortura',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 7,
+    activo: true
+  },
+  {
+    id: 32,
+    email: 'resp.sanidad@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Sanidad',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 8,
+    activo: true
+  },
+  {
+    id: 33,
+    email: 'resp.reserva1@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Reserva 1',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 9,
+    activo: true
+  },
+  {
+    id: 34,
+    email: 'resp.reserva2@u9.gob.ar',
+    password: 'Resp.2025',
+    nombre: 'Responsable Reserva 2',
+    rol: ROLES.RESPONSABLE,
+    sector_id: 10,
     activo: true
   },
   // Cargadores de datos por sector (2 PPL por sector)

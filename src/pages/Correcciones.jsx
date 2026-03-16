@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle, XCircle, ExternalLink, Clock } from 'lucide-react';
-import { getCorrectionRequests, resolveCorrectionRequest, addAuditLog } from '../data/dataService';
+import { AlertCircle, CheckCircle, XCircle, ExternalLink, Clock, Flag, Trash2 } from 'lucide-react';
+import { getCorrectionRequests, resolveCorrectionRequest, addAuditLog, getInscripciones, saveInscripciones } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 
 const ESTADO_CONFIG = {
@@ -13,6 +13,7 @@ const ESTADO_CONFIG = {
 const CAMPO_LABEL = {
     calificacion: 'Calificación',
     observaciones: 'Observaciones',
+    eliminar_inscripcion: 'Eliminar inscripción',
 };
 
 export default function Correcciones() {
@@ -38,6 +39,16 @@ export default function Correcciones() {
         );
         setRequests(getCorrectionRequests());
         showToast(estado === 'resuelta' ? 'Marcada como resuelta' : 'Solicitud rechazada', estado === 'resuelta' ? 'success' : 'danger');
+    };
+
+    const handleEliminarInscripcion = (req) => {
+        const inscripciones = getInscripciones();
+        const updated = inscripciones.filter(i => String(i.id) !== String(req.registro_id));
+        saveInscripciones(updated);
+        resolveCorrectionRequest(req.id, user?.nombre || 'Sin nombre', 'resuelta');
+        addAuditLog(user, 'ELIMINAR_INSCRIPCION', 'Inscripción', `Eliminó inscripción #${req.registro_id} solicitada por ${req.solicitante_nombre}: ${req.registro_desc}`);
+        setRequests(getCorrectionRequests());
+        showToast('Inscripción eliminada correctamente');
     };
 
     const filtered = requests.filter(r =>
@@ -136,14 +147,20 @@ export default function Correcciones() {
                                                 Solicitó: <strong>{req.solicitante_nombre}</strong>
                                             </div>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto 1fr', gap: '4px 12px', fontSize: 'var(--text-sm)', alignItems: 'center' }}>
-                                                <span style={{ color: 'var(--gray-400)' }}>Campo:</span>
-                                                <span style={{ fontWeight: 500 }}>{CAMPO_LABEL[req.campo] || req.campo}</span>
-                                                <span style={{ color: 'var(--gray-400)' }}>Actual:</span>
-                                                <span className="badge badge-neutral">{req.valor_actual || '(vacío)'}</span>
-                                                <span style={{ color: 'var(--gray-400)' }}>Sugerido:</span>
-                                                <span className="badge badge-info">{req.valor_sugerido || '(vacío)'}</span>
-                                            </div>
+                                            {req.campo === 'eliminar_inscripcion' ? (
+                                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: '#dc2626', fontWeight: 600 }}>
+                                                    <Flag size={14} /> Solicitud de eliminación de inscripción
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto 1fr', gap: '4px 12px', fontSize: 'var(--text-sm)', alignItems: 'center' }}>
+                                                    <span style={{ color: 'var(--gray-400)' }}>Campo:</span>
+                                                    <span style={{ fontWeight: 500 }}>{CAMPO_LABEL[req.campo] || req.campo}</span>
+                                                    <span style={{ color: 'var(--gray-400)' }}>Actual:</span>
+                                                    <span className="badge badge-neutral">{req.valor_actual || '(vacío)'}</span>
+                                                    <span style={{ color: 'var(--gray-400)' }}>Sugerido:</span>
+                                                    <span className="badge badge-info">{req.valor_sugerido || '(vacío)'}</span>
+                                                </div>
+                                            )}
 
                                             {req.motivo && (
                                                 <div style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--gray-500)', fontStyle: 'italic' }}>
@@ -169,16 +186,26 @@ export default function Correcciones() {
                                             </button>
                                             {req.estado === 'pendiente' && (
                                                 <>
-                                                    <button
-                                                        className="btn btn-success btn-sm"
-                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                                        onClick={() => handleResolve(req.id, 'resuelta')}
-                                                    >
-                                                        <CheckCircle size={14} /> Marcar resuelta
-                                                    </button>
+                                                    {req.campo === 'eliminar_inscripcion' ? (
+                                                        <button
+                                                            className="btn btn-danger btn-sm"
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                                            onClick={() => handleEliminarInscripcion(req)}
+                                                        >
+                                                            <Trash2 size={14} /> Eliminar inscripción
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="btn btn-success btn-sm"
+                                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                                            onClick={() => handleResolve(req.id, 'resuelta')}
+                                                        >
+                                                            <CheckCircle size={14} /> Marcar resuelta
+                                                        </button>
+                                                    )}
                                                     <button
                                                         className="btn btn-danger btn-sm"
-                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, opacity: req.campo === 'eliminar_inscripcion' ? 1 : undefined }}
                                                         onClick={() => handleResolve(req.id, 'rechazada')}
                                                     >
                                                         <XCircle size={14} /> Rechazar
