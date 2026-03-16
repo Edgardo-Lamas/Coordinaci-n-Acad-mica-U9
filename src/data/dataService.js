@@ -118,7 +118,8 @@ export function importInternosFromExcel(rows, idColumn, nameColumn, dniColumn) {
         total: rows.length,
         imported: validInternos.length,
         skipped,
-        errors: importErrors.slice(0, 20) // Show first 20 errors
+        errors: importErrors.slice(0, 20), // Show first 20 errors
+        validInternos, // para reconciliación posterior
     };
 }
 
@@ -531,6 +532,57 @@ export function resolveCorrectionRequest(id, resolvedByNombre, estado) {
         window.electronAPI.db.resolveCorrectionRequest(id, resolvedByNombre, estado, fechaResolucion)
             .catch(err => console.warn('[SQLite resolveCorrectionRequest]', err))
     }
+}
+
+// ═══════════════════════════════════════════
+// RECONCILIACIÓN DE INTERNOS (DNI → Nº real)
+// ═══════════════════════════════════════════
+
+/**
+ * Cruza los internos con pendiente_reconciliacion=true contra el Excel
+ * de Jefatura (que tiene DNI + número de interno real).
+ * Actualiza numero_interno y las inscripciones que usaban el DNI como ref.
+ * @param {Array} internosExcel - [{numero_interno, nombre_completo, dni}]
+ * @returns {{ reconciliados: number, inscripcionesActualizadas: number }}
+ */
+export function reconciliarInternos(internosExcel) {
+    const allInternos = getInternos()
+    const pendientes = allInternos.filter(i => i.pendiente_reconciliacion && i.dni)
+    if (pendientes.length === 0) return { reconciliados: 0, inscripcionesActualizadas: 0 }
+
+    const dniToNumero = {}
+    for (const ei of internosExcel) {
+        if (ei.dni && ei.numero_interno) {
+            dniToNumero[String(ei.dni).trim()] = String(ei.numero_interno).trim()
+        }
+    }
+
+    let reconciliados = 0
+    const dniToNewNumero = {}
+
+    const updatedInternos = allInternos.map(interno => {
+        if (!interno.pendiente_reconciliacion) return interno
+        const realNumero = dniToNumero[String(interno.dni).trim()]
+        if (!realNumero) return interno
+        dniToNewNumero[String(interno.numero_interno)] = realNumero
+        reconciliados++
+        return { ...interno, numero_interno: realNumero, pendiente_reconciliacion: false }
+    })
+    saveInternos(updatedInternos)
+
+    let inscripcionesActualizadas = 0
+    if (Object.keys(dniToNewNumero).length > 0) {
+        const allInscr = getInscripciones()
+        const updatedInscr = allInscr.map(insc => {
+            const newNumero = dniToNewNumero[String(insc.interno_nro)]
+            if (!newNumero) return insc
+            inscripcionesActualizadas++
+            return { ...insc, interno_nro: newNumero }
+        })
+        saveInscripciones(updatedInscr)
+    }
+
+    return { reconciliados, inscripcionesActualizadas }
 }
 
 // ═══════════════════════════════════════════

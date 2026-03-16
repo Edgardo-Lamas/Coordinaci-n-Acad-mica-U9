@@ -13,5 +13,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     addCorrectionRequest: (entry) => ipcRenderer.invoke('db:addCorrectionRequest', entry),
     resolveCorrectionRequest: (id, resueltoPorNombre, estado, fechaResolucion) =>
       ipcRenderer.invoke('db:resolveCorrectionRequest', id, resueltoPorNombre, estado, fechaResolucion),
-  }
+  },
+
+  watchFolder: {
+    getFolder: () => ipcRenderer.invoke('watch:getFolder'),
+    setFolder: (folderPath) => ipcRenderer.invoke('watch:setFolder', folderPath),
+    openDialog: () => ipcRenderer.invoke('watch:openDialog'),
+    readFile: (filePath) => ipcRenderer.invoke('watch:readFile', filePath),
+    onNewExcel: (callback) => ipcRenderer.on('watch:newExcel', (_e, filePath, filename) => callback(filePath, filename)),
+    removeListener: () => ipcRenderer.removeAllListeners('watch:newExcel'),
+  },
 })

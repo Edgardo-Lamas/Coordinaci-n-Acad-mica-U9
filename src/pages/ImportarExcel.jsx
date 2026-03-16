@@ -1,9 +1,11 @@
-import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download, Trash2, Users, Building2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Download, Trash2, Users, Building2, FolderOpen, Eye, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount, addAuditLog, importSectorData } from '../data/dataService';
+import { importInternosFromExcel, hasImportedData, clearImportedInternos, getInternosCount, addAuditLog, importSectorData, reconciliarInternos } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
+
+const IS_ELECTRON = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
 export default function ImportarExcel() {
     const { user } = useAuth();
@@ -19,6 +21,68 @@ export default function ImportarExcel() {
     const [hasData, setHasData] = useState(hasImportedData());
     const fileRef = useRef(null);
     const navigate = useNavigate();
+
+    // ── Carpeta vigilada (solo Electron) ───────────────────────────────────────
+    const [watchedFolder, setWatchedFolder] = useState('');
+    const [newExcelNotif, setNewExcelNotif] = useState(null); // { filePath, filename }
+
+    useEffect(() => {
+        if (!IS_ELECTRON) return;
+        window.electronAPI.watchFolder.getFolder().then(f => setWatchedFolder(f || ''));
+        window.electronAPI.watchFolder.onNewExcel((filePath, filename) => {
+            setNewExcelNotif({ filePath, filename });
+            setActiveTab('excel');
+        });
+        return () => window.electronAPI.watchFolder.removeListener();
+    }, []);
+
+    const handleChooseFolder = async () => {
+        const chosen = await window.electronAPI.watchFolder.openDialog();
+        if (chosen) {
+            await window.electronAPI.watchFolder.setFolder(chosen);
+            setWatchedFolder(chosen);
+        }
+    };
+
+    const handleClearFolder = async () => {
+        await window.electronAPI.watchFolder.setFolder('');
+        setWatchedFolder('');
+    };
+
+    const handleAutoImport = async () => {
+        if (!newExcelNotif) return;
+        try {
+            const arrayBuffer = await window.electronAPI.watchFolder.readFile(newExcelNotif.filePath);
+            const data = new Uint8Array(arrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+            const headers = Object.keys(jsonData[0] || {});
+            let idColumn = null, nameColumn = null, dniColumn = null;
+            for (const h of headers) {
+                const lower = h.toLowerCase().replace(/[°º]/g, '').trim();
+                if (!idColumn && (lower.includes('n id') || lower.includes('nro') || lower === 'id' || lower.includes('numero') || lower.includes('interno'))) idColumn = h;
+                if (!nameColumn && (lower.includes('apellido') || lower.includes('nombre') || lower.includes('name'))) nameColumn = h;
+                if (!dniColumn && (lower.includes('dni') || lower.includes('documento') || lower.includes('doc'))) dniColumn = h;
+            }
+            if (!idColumn || !nameColumn) {
+                setErrors(['No se detectaron las columnas requeridas en el archivo.']);
+                setNewExcelNotif(null);
+                return;
+            }
+            const importResult = importInternosFromExcel(jsonData, idColumn, nameColumn, dniColumn);
+            const recon = reconciliarInternos(importResult.validInternos);
+            setResult({ ...importResult, reconciliados: recon.reconciliados, inscripcionesReconciliadas: recon.inscripcionesActualizadas, fromWatcher: true });
+            setHasData(true);
+            setNewExcelNotif(null);
+            addAuditLog(user, 'IMPORTAR_INTERNOS_AUTO', 'Interno',
+                `Importación automática ${newExcelNotif.filename}: ${importResult.imported} importados, ${recon.reconciliados} reconciliados`);
+        } catch (err) {
+            setErrors(['Error al procesar el archivo: ' + err.message]);
+            setNewExcelNotif(null);
+        }
+    };
 
     // ── Tab Sector JSON ────────────────────────────────────────────────────────
     const [sectorFile, setSectorFile] = useState(null);
@@ -159,9 +223,11 @@ export default function ImportarExcel() {
                     preview.nameColumn,
                     preview.dniColumn
                 );
-                setResult(importResult);
+                const recon = reconciliarInternos(importResult.validInternos);
+                setResult({ ...importResult, reconciliados: recon.reconciliados, inscripcionesReconciliadas: recon.inscripcionesActualizadas });
                 setHasData(true);
-                addAuditLog(user, 'IMPORTAR_INTERNOS', 'Interno', `Importación Excel: ${importResult.imported} registros importados, ${importResult.skipped} omitidos`);
+                addAuditLog(user, 'IMPORTAR_INTERNOS', 'Interno',
+                    `Importación Excel: ${importResult.imported} registros importados, ${importResult.skipped} omitidos, ${recon.reconciliados} reconciliados`);
             } catch (err) {
                 setErrors([err.message]);
             }
@@ -354,6 +420,29 @@ export default function ImportarExcel() {
             {/* ── TAB: Importar internos desde Excel ────────────────────────── */}
             {activeTab === 'excel' && (<>
 
+            {/* Notificación: nuevo Excel detectado por la carpeta vigilada */}
+            {newExcelNotif && (
+                <div className="card" style={{ marginBottom: 'var(--space-4)', borderLeft: '4px solid var(--primary-600)', background: 'var(--primary-50, #eff6ff)' }}>
+                    <div className="card-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <RefreshCw size={20} style={{ color: 'var(--primary-600)' }} />
+                            <div>
+                                <strong>Nuevo Excel detectado en la carpeta vigilada</strong>
+                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>{newExcelNotif.filename}</div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                            <button className="btn btn-primary btn-sm" onClick={handleAutoImport}>
+                                <Download size={16} /> Importar ahora
+                            </button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setNewExcelNotif(null)}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Existing data banner */}
             {hasData && !result && !preview && (
                 <div className="card" style={{ marginBottom: 'var(--space-4)', borderLeft: '4px solid var(--success)' }}>
@@ -385,7 +474,7 @@ export default function ImportarExcel() {
                         <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginBottom: 'var(--space-4)' }}>
                             Los datos fueron guardados correctamente y persistirán al recargar la página.
                         </p>
-                        <div style={{ display: 'flex', gap: 'var(--space-6)', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
+                        <div style={{ display: 'flex', gap: 'var(--space-6)', justifyContent: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap' }}>
                             <div>
                                 <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--success)' }}>{result.imported}</div>
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>Importados</div>
@@ -394,11 +483,23 @@ export default function ImportarExcel() {
                                 <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--warning)' }}>{result.skipped}</div>
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>Omitidos</div>
                             </div>
+                            {result.reconciliados > 0 && (
+                                <div>
+                                    <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--primary-600)' }}>{result.reconciliados}</div>
+                                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>Reconciliados</div>
+                                </div>
+                            )}
                             <div>
                                 <div style={{ fontSize: 'var(--text-3xl)', fontWeight: 800, color: 'var(--gray-400)' }}>{result.total}</div>
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>Total</div>
                             </div>
                         </div>
+                        {result.reconciliados > 0 && (
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--primary-700)', background: 'var(--primary-50, #eff6ff)', padding: '8px 16px', borderRadius: 6, marginBottom: 'var(--space-4)' }}>
+                                ✓ {result.reconciliados} interno{result.reconciliados !== 1 ? 's' : ''} cargado{result.reconciliados !== 1 ? 's' : ''} desde sectores fueron vinculados con su número de interno oficial.
+                                {result.inscripcionesReconciliadas > 0 && ` (${result.inscripcionesReconciliadas} inscripciones actualizadas)`}
+                            </div>
+                        )}
 
                         {result.errors.length > 0 && (
                             <div style={{ textAlign: 'left', marginTop: 'var(--space-4)' }}>
@@ -560,6 +661,37 @@ export default function ImportarExcel() {
                                 </>
                             )}
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Carpeta vigilada (solo Electron) */}
+            {IS_ELECTRON && (
+                <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+                    <div className="card-header">
+                        <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <FolderOpen size={18} /> Carpeta vigilada — Excel de Jefatura
+                        </h2>
+                    </div>
+                    <div className="card-body">
+                        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', marginBottom: 'var(--space-4)' }}>
+                            Cuando Jefatura envíe el Excel actualizado por email, guardalo en esta carpeta.
+                            La aplicación lo detectará automáticamente y te ofrecerá importarlo.
+                        </p>
+                        {watchedFolder ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1, padding: '8px 12px', background: 'var(--gray-50)', borderRadius: 6, fontSize: 'var(--text-sm)', fontFamily: 'monospace', border: '1px solid var(--gray-200)', wordBreak: 'break-all' }}>
+                                    <Eye size={14} style={{ verticalAlign: 'middle', marginRight: 6, color: 'var(--success)' }} />
+                                    {watchedFolder}
+                                </div>
+                                <button className="btn btn-secondary btn-sm" onClick={handleChooseFolder}>Cambiar</button>
+                                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={handleClearFolder}>Quitar</button>
+                            </div>
+                        ) : (
+                            <button className="btn btn-primary btn-sm" onClick={handleChooseFolder}>
+                                <FolderOpen size={16} /> Elegir carpeta
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
