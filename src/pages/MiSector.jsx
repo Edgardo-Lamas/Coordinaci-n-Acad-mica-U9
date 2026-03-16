@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
 import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog, addCorrectionRequest } from '../data/dataService';
-import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Award, Download, Upload, Flag } from 'lucide-react';
+import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Download, Upload, Flag } from 'lucide-react';
 import { useState } from 'react';
 
 export default function MiSector() {
@@ -14,7 +14,7 @@ export default function MiSector() {
     const [activeTab, setActiveTab] = useState('internos');
     const [showFormInscripcion, setShowFormInscripcion] = useState(false);
     const [inscripcionesList, setInscripcionesList] = useState(() => getInscripciones());
-    const [newInsc, setNewInsc] = useState({ interno_nro: '', curso_id: '', nombre_manual: '' });
+    const [newInsc, setNewInsc] = useState({ nombre: '', dni: '', whatsapp: '', curso_id: '' });
     const [flagModal, setFlagModal] = useState(null); // { insc, motivo }
     const [flagEnviada, setFlagEnviada] = useState(null); // id de inscripción con bandera enviada
 
@@ -34,29 +34,36 @@ export default function MiSector() {
         e.preventDefault();
         const cursoId = Number(newInsc.curso_id);
         const curso = CURSOS.find(c => c.id === cursoId);
-        const nroInterno = newInsc.interno_nro.trim();
+        const dniLimpio = newInsc.dni.trim();
+        const nombreLimpio = newInsc.nombre.trim();
 
-        // Si el interno no existe localmente, registrarlo con el nombre ingresado
+        // Buscar por DNI; si no existe, registrarlo (número de interno = DNI hasta reconciliación)
         const allInternos = getInternos();
-        const yaExiste = allInternos.find(i => String(i.numero_interno) === String(nroInterno));
-        if (!yaExiste && newInsc.nombre_manual.trim()) {
+        const yaExiste = allInternos.find(i => String(i.dni) === String(dniLimpio));
+        let nroRef;
+        if (!yaExiste) {
+            nroRef = dniLimpio; // DNI como identificador temporal
             saveInternos([...allInternos, {
-                numero_interno: nroInterno,
-                nombre_completo: newInsc.nombre_manual.trim(),
+                numero_interno: dniLimpio,
+                nombre_completo: nombreLimpio,
+                dni: dniLimpio,
+                whatsapp: newInsc.whatsapp.trim() || '',
                 estado: 'activo',
                 sector_actual: user.sector_id,
+                pendiente_reconciliacion: true,
             }]);
-        } else if (yaExiste && curso?.sector_id) {
+        } else {
+            nroRef = yaExiste.numero_interno;
             saveInternos(allInternos.map(i =>
-                String(i.numero_interno) === String(nroInterno)
-                    ? { ...i, sector_actual: curso.sector_id }
+                String(i.dni) === String(dniLimpio)
+                    ? { ...i, sector_actual: user.sector_id }
                     : i
             ));
         }
 
         const nuevaCarga = {
             id: inscripcionesList.length + 1,
-            interno_nro: nroInterno,
+            interno_nro: nroRef,
             curso_id: cursoId,
             calificacion: 'en_curso',
             observaciones: '',
@@ -71,7 +78,7 @@ export default function MiSector() {
         saveInscripciones(updatedInsc);
 
         setShowFormInscripcion(false);
-        setNewInsc({ interno_nro: '', curso_id: '', nombre_manual: '' });
+        setNewInsc({ nombre: '', dni: '', whatsapp: '', curso_id: '' });
     };
 
     const getCalificacionBadge = (cal) => {
@@ -413,44 +420,55 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                                     Cargador: <strong>{user.nombre}</strong> ({user.rolLabel})
                                 </p>
                                 <div className="form-group">
-                                    <label className="form-label">Número de interno *</label>
+                                    <label className="form-label">DNI *</label>
                                     <input
                                         type="text"
                                         className="form-input"
-                                        placeholder="Ej: 12345"
-                                        value={newInsc.interno_nro}
-                                        onChange={e => setNewInsc({ ...newInsc, interno_nro: e.target.value, nombre_manual: '' })}
+                                        placeholder="Número de DNI"
+                                        value={newInsc.dni}
+                                        onChange={e => {
+                                            const dni = e.target.value;
+                                            const enc = INTERNOS.find(i => String(i.dni) === String(dni.trim()));
+                                            setNewInsc({
+                                                ...newInsc,
+                                                dni,
+                                                nombre: enc ? enc.nombre_completo : newInsc.nombre,
+                                                whatsapp: enc?.whatsapp || newInsc.whatsapp,
+                                            });
+                                        }}
                                         required
                                         autoFocus
                                     />
-                                    {(() => {
-                                        const nro = newInsc.interno_nro.trim();
-                                        if (!nro) return null;
-                                        const encontrado = INTERNOS.find(i => String(i.numero_interno) === String(nro));
-                                        if (encontrado) {
-                                            return (
-                                                <div style={{ marginTop: 6, padding: '8px 12px', borderRadius: 6, background: 'var(--success-50, #f0fdf4)', border: '1px solid var(--success-200, #bbf7d0)', fontSize: 'var(--text-sm)', color: '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <span style={{ fontSize: 16 }}>✓</span>
-                                                    <span><strong>{encontrado.nombre_completo}</strong>{encontrado.dni ? ` · DNI ${encontrado.dni}` : ''}</span>
-                                                </div>
-                                            );
-                                        }
-                                        return (
-                                            <div style={{ marginTop: 8 }}>
-                                                <div style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-                                                    Interno no registrado localmente — ingresá el nombre:
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    className="form-input"
-                                                    placeholder="Apellido y nombre completo"
-                                                    value={newInsc.nombre_manual}
-                                                    onChange={e => setNewInsc({ ...newInsc, nombre_manual: e.target.value })}
-                                                    required
-                                                />
-                                            </div>
-                                        );
-                                    })()}
+                                    {newInsc.dni.trim() && INTERNOS.find(i => String(i.dni) === String(newInsc.dni.trim())) && (
+                                        <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 'var(--text-xs)', color: '#166534' }}>
+                                            ✓ Ya registrado — datos completados automáticamente
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Nombre completo *</label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Apellido y nombre"
+                                        value={newInsc.nombre}
+                                        onChange={e => setNewInsc({ ...newInsc, nombre: e.target.value })}
+                                        required
+                                        readOnly={!!INTERNOS.find(i => String(i.dni) === String(newInsc.dni.trim()))}
+                                        style={INTERNOS.find(i => String(i.dni) === String(newInsc.dni.trim())) ? { background: 'var(--gray-50)', color: 'var(--gray-600)' } : undefined}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">
+                                        WhatsApp <span style={{ fontWeight: 400, color: 'var(--gray-400)' }}>opcional</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Ej: 2214567890"
+                                        value={newInsc.whatsapp}
+                                        onChange={e => setNewInsc({ ...newInsc, whatsapp: e.target.value })}
+                                    />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Curso *</label>
