@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES, ROLE_LABELS, SECTORES } from '../data/mockData';
-import { getUsuarios, saveUsuarios } from '../data/dataService';
-import { Settings, Plus, Pencil, UserX, UserCheck, X, User, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { getUsuarios, saveUsuarios, saveInternos, saveCursos, saveInscripciones, saveCertificados, saveCorrectionRequests } from '../data/dataService';
+import { Settings, Plus, Pencil, UserX, UserCheck, X, User, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
 
 const ROLE_BADGE = {
     [ROLES.ADMIN]: 'badge-danger',
@@ -33,6 +33,17 @@ export default function Configuracion() {
     const [error, setError] = useState('');
     const [filterRol, setFilterRol] = useState('');
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [confirmReset, setConfirmReset] = useState(false);
+
+    const handleResetDatos = () => {
+        saveInternos([]);
+        saveCursos([]);
+        saveInscripciones([]);
+        saveCertificados([]);
+        saveCorrectionRequests([]);
+        localStorage.removeItem('ga_u9_audit_log');
+        setConfirmReset(false);
+    };
 
     const rolesNecesitanSector = ROLES_CON_SECTOR.includes(form.rol);
 
@@ -387,6 +398,57 @@ export default function Configuracion() {
                             <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Cancelar</button>
                             <button className="btn btn-primary btn-sm" onClick={handleSave}>
                                 {editingUser ? 'Guardar Cambios' : 'Crear Usuario'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Zona de riesgo */}
+            <div className="card" style={{ marginTop: 'var(--space-6)', borderColor: 'var(--danger, #dc2626)' }}>
+                <div className="card-header" style={{ background: '#fff5f5' }}>
+                    <h2 className="card-title" style={{ color: 'var(--danger, #dc2626)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <AlertTriangle size={18} /> Zona de riesgo
+                    </h2>
+                </div>
+                <div className="card-body">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                        <div>
+                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)' }}>Limpiar todos los datos de prueba</div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', marginTop: 2 }}>
+                                Elimina internos, cursos, inscripciones, certificados, correcciones y auditoría. Los usuarios y sectores se mantienen.
+                            </div>
+                        </div>
+                        <button className="btn btn-danger btn-sm" onClick={() => setConfirmReset(true)}>
+                            <Trash2 size={15} /> Limpiar datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Modal confirmación reset */}
+            {confirmReset && (
+                <div className="modal-overlay" onClick={() => setConfirmReset(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title" style={{ color: 'var(--danger, #dc2626)' }}>
+                                <AlertTriangle size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                                Confirmar limpieza
+                            </h2>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{ fontSize: 'var(--text-sm)' }}>
+                                Esta acción borrará <strong>permanentemente</strong> todos los datos operativos:
+                                internos, cursos, inscripciones, certificados, correcciones y auditoría.
+                            </p>
+                            <p style={{ fontSize: 'var(--text-sm)', marginTop: 8, color: 'var(--danger, #dc2626)', fontWeight: 600 }}>
+                                Esta acción no se puede deshacer.
+                            </p>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-secondary btn-sm" onClick={() => setConfirmReset(false)}>Cancelar</button>
+                            <button className="btn btn-danger btn-sm" onClick={handleResetDatos}>
+                                Sí, limpiar todo
                             </button>
                         </div>
                     </div>
