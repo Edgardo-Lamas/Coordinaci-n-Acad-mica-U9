@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SECTORES } from '../data/mockData';
-import { getInternos } from '../data/dataService';
+import { getInternos, saveInternos, addAuditLog } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
     Search, Plus, ChevronLeft, ChevronRight, Eye, Edit, User, Download
@@ -19,11 +19,24 @@ export default function Internos() {
     );
     const [filterEstado, setFilterEstado] = useState('');
     const [page, setPage] = useState(1);
+    const [editModal, setEditModal] = useState(null);
+    const [editObs, setEditObs] = useState('');
+    const [internosList, setInternosList] = useState(() => getInternos());
 
-    const internos = getInternos();
+    const handleSaveObservaciones = () => {
+        const updated = internosList.map(i =>
+            i.numero_interno === editModal.numero_interno
+                ? { ...i, observaciones: editObs.trim() }
+                : i
+        );
+        saveInternos(updated);
+        addAuditLog(user, 'EDITAR_INTERNO', 'Interno', `Actualizó observaciones de ${editModal.nombre_completo}`);
+        setInternosList(updated);
+        setEditModal(null);
+    };
 
     const filtered = useMemo(() => {
-        return internos.filter(interno => {
+        return internosList.filter(interno => {
             const matchSearch = !search ||
                 interno.nombre_completo.toLowerCase().includes(search.toLowerCase()) ||
                 interno.numero_interno.includes(search) ||
@@ -34,7 +47,7 @@ export default function Internos() {
                 interno.estado === filterEstado;
             return matchSearch && matchSector && matchEstado;
         });
-    }, [search, filterSector, filterEstado]);
+    }, [search, filterSector, filterEstado, internosList]);
 
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
     const paginatedInternos = filtered.slice(
@@ -43,7 +56,7 @@ export default function Internos() {
     );
 
     return (
-        <div>
+        <>
             <div className="page-header">
                 <div>
                     <h1 className="page-title">Internos</h1>
@@ -157,9 +170,16 @@ export default function Internos() {
                                             >
                                                 <Eye size={16} />
                                             </button>
-                                            <button className="btn btn-ghost btn-icon btn-sm" title="Editar">
-                                                <Edit size={16} />
-                                            </button>
+                                            {!isResponsable() && !isCargador() && (
+                                                <button
+                                                    className="btn btn-ghost btn-icon btn-sm"
+                                                    title={interno.observaciones ? 'Ver/editar observaciones' : 'Agregar observaciones'}
+                                                    style={{ color: interno.observaciones ? 'var(--primary-600)' : undefined }}
+                                                    onClick={() => { setEditModal(interno); setEditObs(interno.observaciones || ''); }}
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -226,6 +246,37 @@ export default function Internos() {
                     </div>
                 )}
             </div>
-        </div>
+
+        {editModal && (
+            <div className="modal-overlay" onClick={() => setEditModal(null)}>
+                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+                    <div className="modal-header">
+                        <h3 className="modal-title">Observaciones — {editModal.nombre_completo}</h3>
+                        <button className="modal-close" onClick={() => setEditModal(null)}>✕</button>
+                    </div>
+                    <div className="modal-body">
+                        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', marginBottom: 'var(--space-4)' }}>
+                            Nº interno: <strong>#{editModal.numero_interno}</strong>
+                            {editModal.dni && <> · DNI: <strong>{editModal.dni}</strong></>}
+                        </p>
+                        <label className="form-label">Notas y observaciones</label>
+                        <textarea
+                            className="form-input"
+                            rows={6}
+                            placeholder="Antecedentes, observaciones de conducta, cursos realizados en otras unidades u otras notas relevantes..."
+                            value={editObs}
+                            onChange={e => setEditObs(e.target.value)}
+                            autoFocus
+                            style={{ resize: 'vertical' }}
+                        />
+                    </div>
+                    <div className="modal-footer">
+                        <button className="btn btn-secondary" onClick={() => setEditModal(null)}>Cancelar</button>
+                        <button className="btn btn-primary" onClick={handleSaveObservaciones}>Guardar</button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }

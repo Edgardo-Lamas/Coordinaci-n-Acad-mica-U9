@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS internos (
   sector_actual INTEGER,
   fecha_ingreso TEXT,
   estado TEXT NOT NULL DEFAULT 'activo',
-  whatsapp_contacto TEXT
+  whatsapp_contacto TEXT,
+  observaciones TEXT
 );
 
 CREATE TABLE IF NOT EXISTS cursos (
@@ -108,6 +109,8 @@ function initDatabase() {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
+  // Migraciones para bases de datos existentes
+  try { db.prepare('ALTER TABLE internos ADD COLUMN observaciones TEXT').run() } catch {}
   console.log('[DB] SQLite inicializado en:', dbPath)
   return db
 }
@@ -118,8 +121,8 @@ const internos = {
   saveAll: (records) => {
     const upsert = db.prepare(`
       INSERT OR REPLACE INTO internos
-      (numero_interno, nombre_completo, dni, sector_actual, fecha_ingreso, estado, whatsapp_contacto)
-      VALUES (@numero_interno, @nombre_completo, @dni, @sector_actual, @fecha_ingreso, @estado, @whatsapp_contacto)
+      (numero_interno, nombre_completo, dni, sector_actual, fecha_ingreso, estado, whatsapp_contacto, observaciones)
+      VALUES (@numero_interno, @nombre_completo, @dni, @sector_actual, @fecha_ingreso, @estado, @whatsapp_contacto, @observaciones)
     `)
     db.transaction((rows) => {
       db.prepare('DELETE FROM internos').run()
