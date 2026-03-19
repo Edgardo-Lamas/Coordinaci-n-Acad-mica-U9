@@ -22,6 +22,21 @@ export default function SearchableSelect({ options, value, onChange, placeholder
         if (!search) return true;
         const q = search.toLowerCase();
         return o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q) || (o.sublabel && o.sublabel.toLowerCase().includes(q));
+    }).sort((a, b) => {
+        if (!search) return 0;
+        const q = search.toLowerCase();
+        // Extraer la parte del nombre (después de '— ' si existe, ej: "#123 — Rodriguez, Juan")
+        const getName = (label) => {
+            const idx = label.indexOf('— ');
+            return (idx >= 0 ? label.slice(idx + 2) : label).toLowerCase();
+        };
+        const aName = getName(a.label);
+        const bName = getName(b.label);
+        const aStarts = aName.startsWith(q);
+        const bStarts = bName.startsWith(q);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return aName.localeCompare(bName, 'es');
     });
 
     // Limit visible results for performance
