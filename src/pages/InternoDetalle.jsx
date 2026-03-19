@@ -74,6 +74,22 @@ export default function InternoDetalle() {
         );
     }
 
+    // RESPONSABLE y CARGADOR solo pueden ver internos de su propio sector
+    if ((isResponsable() || isCargador()) && interno.sector_actual !== user?.sector_id) {
+        return (
+            <div className="empty-state">
+                <User size={64} className="empty-icon" />
+                <div className="empty-title">Acceso restringido</div>
+                <div className="empty-text">
+                    No tenés permiso para ver el perfil de internos de otros sectores.
+                </div>
+                <button className="btn btn-primary" onClick={() => navigate('/mi-sector')} style={{ marginTop: 16 }}>
+                    Volver a Mi Sector
+                </button>
+            </div>
+        );
+    }
+
     const sector = SECTORES.find(s => s.id === interno.sector_actual);
 
     // Get all inscriptions for this intern

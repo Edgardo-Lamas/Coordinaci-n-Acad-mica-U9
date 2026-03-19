@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Users, BookOpen, X } from 'lucide-react';
 import { getInternos, getCursos } from '../data/dataService';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function GlobalSearch() {
     const [query, setQuery] = useState('');
@@ -10,6 +11,7 @@ export default function GlobalSearch() {
     const containerRef = useRef(null);
     const inputRef = useRef(null);
     const navigate = useNavigate();
+    const { user, isResponsable, isCargador } = useAuth();
 
     // Ctrl+K / Cmd+K para enfocar
     useEffect(() => {
@@ -43,12 +45,16 @@ export default function GlobalSearch() {
             return;
         }
         const q = query.toLowerCase();
+        const restrictoASector = isResponsable() || isCargador();
         const internos = getInternos()
-            .filter(i =>
-                i.nombre_completo?.toLowerCase().includes(q) ||
-                String(i.numero_interno).toLowerCase().includes(q) ||
-                (i.dni || '').toLowerCase().includes(q)
-            )
+            .filter(i => {
+                if (restrictoASector && i.sector_actual !== user?.sector_id) return false;
+                return (
+                    i.nombre_completo?.toLowerCase().includes(q) ||
+                    String(i.numero_interno).toLowerCase().includes(q) ||
+                    (i.dni || '').toLowerCase().includes(q)
+                );
+            })
             .slice(0, 5);
         const cursos = getCursos()
             .filter(c => c.nombre?.toLowerCase().includes(q))

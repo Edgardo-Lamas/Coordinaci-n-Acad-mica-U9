@@ -1,10 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
-import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog, addCorrectionRequest } from '../data/dataService';
+import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog, addCorrectionRequest, importInternosFromExcel, reconciliarInternos } from '../data/dataService';
 import { useCicloLectivo } from '../contexts/CicloLectivoContext';
-import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Download, Upload, Flag } from 'lucide-react';
+import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Download, Upload, Flag, FolderOpen } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 
 const IS_ELECTRON = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
@@ -22,12 +23,46 @@ export default function MiSector() {
     const [flagModal, setFlagModal] = useState(null); // { insc, motivo }
     const [flagEnviada, setFlagEnviada] = useState(null); // id de inscripción con bandera enviada
     const [reporteListo, setReporteListo] = useState(false);
+    const [watchedFolder, setWatchedFolder] = useState('');
+    const [excelToast, setExcelToast] = useState(null);
 
     useEffect(() => {
         if (!IS_ELECTRON) return;
         window.electronAPI.sector.onReporteReady(() => setReporteListo(true));
         return () => window.electronAPI.sector.removeReporteListener();
     }, []);
+
+    useEffect(() => {
+        if (!IS_ELECTRON) return;
+        window.electronAPI.watchFolder.getFolder().then(f => setWatchedFolder(f || ''));
+        window.electronAPI.watchFolder.onNewExcel(async (filePath, filename) => {
+            try {
+                const buf = await window.electronAPI.watchFolder.readFile(filePath);
+                const data = new Uint8Array(buf);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                const result = importInternosFromExcel(rows);
+                const recon = reconciliarInternos();
+                addAuditLog(user, 'IMPORTAR_INTERNOS_AUTO', 'Interno',
+                    `Importación automática ${filename}: ${result.imported} importados, ${recon.reconciliados} reconciliados`);
+                setExcelToast({ msg: `${filename}: ${result.imported} internos cargados, ${recon.reconciliados} reconciliados`, type: 'success' });
+                setTimeout(() => setExcelToast(null), 8000);
+            } catch (err) {
+                setExcelToast({ msg: `Error al importar ${filename}: ${err.message}`, type: 'error' });
+                setTimeout(() => setExcelToast(null), 6000);
+            }
+        });
+        return () => window.electronAPI.watchFolder.removeListener();
+    }, []);
+
+    const handleConfigFolder = async () => {
+        const folder = await window.electronAPI.watchFolder.openDialog();
+        if (folder) {
+            await window.electronAPI.watchFolder.setFolder(folder);
+            setWatchedFolder(folder);
+        }
+    };
 
     const sector = SECTORES.find(s => s.id === user.sector_id);
     const sectorInternos = INTERNOS.filter(i => i.sector_actual === user.sector_id && i.estado === 'activo');
@@ -237,6 +272,39 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                         <button className="btn btn-ghost btn-sm" style={{ color: '#fff' }}
                             onClick={() => setReporteListo(false)}>✕</button>
                     </div>
+                </div>
+            )}
+
+            {IS_ELECTRON && (
+                <div className="card" style={{ marginBottom: 'var(--space-4)', borderLeft: '4px solid var(--primary-300)' }}>
+                    <div className="card-body" style={{ padding: 'var(--space-3) var(--space-4)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <FolderOpen size={18} style={{ color: 'var(--primary-500)', flexShrink: 0 }} />
+                            <div>
+                                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gray-700)' }}>
+                                    Carpeta de actualización de internos
+                                </div>
+                                <div style={{ fontSize: 'var(--text-xs)', color: watchedFolder ? 'var(--gray-500)' : 'var(--gray-400)', fontFamily: watchedFolder ? 'monospace' : 'inherit' }}>
+                                    {watchedFolder || 'Sin carpeta configurada — guardá el Excel de Jefatura aquí para importarlo automáticamente'}
+                                </div>
+                            </div>
+                        </div>
+                        <button className="btn btn-secondary btn-sm" onClick={handleConfigFolder}>
+                            <FolderOpen size={14} /> {watchedFolder ? 'Cambiar carpeta' : 'Configurar carpeta'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {excelToast && (
+                <div style={{
+                    position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+                    background: excelToast.type === 'success' ? '#16a34a' : '#dc2626',
+                    color: '#fff', borderRadius: 8, padding: '12px 20px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.2)', maxWidth: 420,
+                    fontSize: 'var(--text-sm)', fontWeight: 500
+                }}>
+                    {excelToast.msg}
                 </div>
             )}
 
