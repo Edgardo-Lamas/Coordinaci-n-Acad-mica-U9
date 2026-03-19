@@ -195,6 +195,15 @@ export default function Inscripciones() {
                 </div>
             </div>
 
+            {/* Leyenda calificaciones */}
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', marginBottom: 'var(--space-2)', display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 600 }}>Referencias:</span>
+                <span className="badge badge-info" style={{ fontWeight: 700 }}>EC</span> En Curso &nbsp;·&nbsp;
+                <span className="badge badge-success" style={{ fontWeight: 700 }}>A</span> Aprobado &nbsp;·&nbsp;
+                <span className="badge badge-danger" style={{ fontWeight: 700 }}>D</span> Desaprobado
+                <span style={{ color: 'var(--gray-400)', fontStyle: 'italic' }}>&nbsp;(click en el badge para cambiar)</span>
+            </div>
+
             {/* Table */}
             <div className="table-container">
                 <table className="data-table">
@@ -224,20 +233,17 @@ export default function Inscripciones() {
                                     {insc.fecha_fin_curso ? ' → ' + new Date(insc.fecha_fin_curso).toLocaleDateString('es-AR') : ''}
                                 </td>
                                 <td>
-                                    <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
-                                        <button
-                                            className={`btn btn-sm ${insc.calificacion === 'en_curso' ? 'btn-primary' : 'btn-ghost'}`}
-                                            onClick={() => handleCalifChange(insc.id, 'en_curso')}
-                                        >En Curso</button>
-                                        <button
-                                            className={`btn btn-sm ${insc.calificacion === 'aprobado' ? 'btn-success' : 'btn-ghost'}`}
-                                            onClick={() => handleCalifChange(insc.id, 'aprobado')}
-                                        >Aprobado</button>
-                                        <button
-                                            className={`btn btn-sm ${insc.calificacion === 'desaprobado' ? 'btn-danger' : 'btn-ghost'}`}
-                                            onClick={() => handleCalifChange(insc.id, 'desaprobado')}
-                                        >Desaprobado</button>
-                                    </div>
+                                    <button
+                                        className={`badge ${insc.calificacion === 'aprobado' ? 'badge-success' : insc.calificacion === 'desaprobado' ? 'badge-danger' : 'badge-info'}`}
+                                        style={{ cursor: 'pointer', border: 'none', fontWeight: 700, fontSize: 13 }}
+                                        title={insc.calificacion === 'en_curso' ? 'En Curso — click para cambiar' : insc.calificacion === 'aprobado' ? 'Aprobado — click para cambiar' : 'Desaprobado — click para cambiar'}
+                                        onClick={() => {
+                                            const next = insc.calificacion === 'en_curso' ? 'aprobado' : insc.calificacion === 'aprobado' ? 'desaprobado' : 'en_curso';
+                                            handleCalifChange(insc.id, next);
+                                        }}
+                                    >
+                                        {insc.calificacion === 'en_curso' ? 'EC' : insc.calificacion === 'aprobado' ? 'A' : 'D'}
+                                    </button>
                                 </td>
                                 <td>
                                     {(() => {
