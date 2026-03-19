@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SECTORES } from '../data/mockData';
-import { getInternos, saveInternos, addAuditLog } from '../data/dataService';
+import { getInternos, saveInternos, addAuditLog, computeDiff } from '../data/dataService';
 import { useAuth } from '../contexts/AuthContext';
 import {
     Search, Plus, ChevronLeft, ChevronRight, Eye, Edit, User, Download
@@ -30,7 +30,11 @@ export default function Internos() {
                 : i
         );
         saveInternos(updated);
-        addAuditLog(user, 'EDITAR_INTERNO', 'Interno', `Actualizó observaciones de ${editModal.nombre_completo}`);
+        const diff = computeDiff(
+            { observaciones: editModal.observaciones || '' },
+            { observaciones: editObs.trim() }
+        );
+        addAuditLog(user, 'EDITAR_INTERNO', 'Interno', `Actualizó observaciones de ${editModal.nombre_completo}`, diff.length ? diff : null);
         setInternosList(updated);
         setEditModal(null);
     };

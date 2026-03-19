@@ -4,7 +4,7 @@ import {
     SECTORES, TIPOS_CURSO,
     ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES
 } from '../data/mockData';
-import { getCursos, saveCursos, getCapacitadores, addCapacitador, getInscripciones, addAuditLog } from '../data/dataService';
+import { getCursos, saveCursos, getCapacitadores, addCapacitador, getInscripciones, addAuditLog, computeDiff } from '../data/dataService';
 import {
     Plus, Search, BookOpen, CheckCircle, XCircle, Play, RotateCcw, UserPlus, Pencil, Trash2, Download
 } from 'lucide-react';
@@ -102,13 +102,15 @@ export default function Cursos() {
         let updated;
         if (editingCurso) {
             updated = cursosList.map(c => c.id === editingCurso.id ? { ...c, ...base } : c);
+            const diff = computeDiff(editingCurso, base);
+            addAuditLog(user, 'EDITAR_CURSO', 'Curso', `Edición del curso "${base.nombre}"`, diff.length ? diff : null);
         } else {
             const maxId = cursosList.reduce((max, c) => Math.max(max, c.id), 0);
             updated = [...cursosList, { ...base, id: maxId + 1, estado: ESTADOS_CURSO.PENDIENTE }];
+            addAuditLog(user, 'CREAR_CURSO', 'Curso', `Creación del curso "${base.nombre}"`);
         }
         setCursosList(updated);
         saveCursos(updated);
-        addAuditLog(user, editingCurso ? 'EDITAR_CURSO' : 'CREAR_CURSO', 'Curso', `${editingCurso ? 'Edición' : 'Creación'} del curso "${base.nombre}"`);
         setShowForm(false);
         setEditingCurso(null);
         setShowNewCapacitador(false);

@@ -2,6 +2,27 @@ import { useState } from 'react';
 import { getAuditLog } from '../data/dataService';
 import { Shield, Search } from 'lucide-react';
 
+const CAMPO_LABELS = {
+    calificacion: 'Calificación', observaciones: 'Observaciones', nombre: 'Nombre',
+    fecha_inicio: 'Fecha inicio', fecha_fin: 'Fecha fin', cupo_maximo: 'Cupo máximo',
+    carga_horaria: 'Carga horaria', estado: 'Estado', sector_id: 'Sector',
+    capacitador_id: 'Capacitador', descripcion: 'Descripción', tipo: 'Tipo',
+};
+
+function parseDetalle(detalle) {
+    try {
+        const parsed = JSON.parse(detalle);
+        if (parsed.descripcion) return parsed;
+    } catch {}
+    return { descripcion: detalle, cambios: null };
+}
+
+function detalleTextoPlano(detalle) {
+    const parsed = parseDetalle(detalle);
+    const camposText = parsed.cambios?.map(c => `${c.campo} ${c.antes} ${c.despues}`).join(' ') || '';
+    return `${parsed.descripcion} ${camposText}`;
+}
+
 export default function Auditoria() {
     const [search, setSearch] = useState('');
     const [filterAccion, setFilterAccion] = useState('');
@@ -11,7 +32,7 @@ export default function Auditoria() {
 
     const filtered = auditLog.filter(log => {
         const matchSearch = !search ||
-            log.detalle.toLowerCase().includes(search.toLowerCase()) ||
+            detalleTextoPlano(log.detalle).toLowerCase().includes(search.toLowerCase()) ||
             log.accion.toLowerCase().includes(search.toLowerCase());
         const matchAccion = !filterAccion || log.accion === filterAccion;
         return matchSearch && matchAccion;
@@ -115,7 +136,34 @@ export default function Auditoria() {
                                         </span>
                                     </td>
                                     <td>{log.entidad}</td>
-                                    <td style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>{log.detalle}</td>
+                                    <td style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
+                                        {(() => {
+                                            const parsed = parseDetalle(log.detalle);
+                                            return (
+                                                <>
+                                                    <div>{parsed.descripcion}</div>
+                                                    {parsed.cambios?.length > 0 && (
+                                                        <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                                            {parsed.cambios.map((c, i) => (
+                                                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontWeight: 600 }}>
+                                                                        {CAMPO_LABELS[c.campo] || c.campo}:
+                                                                    </span>
+                                                                    <span style={{ fontSize: 'var(--text-xs)', background: '#fee2e2', color: '#b91c1c', padding: '1px 5px', borderRadius: 3 }}>
+                                                                        {c.antes || '(vacío)'}
+                                                                    </span>
+                                                                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>→</span>
+                                                                    <span style={{ fontSize: 'var(--text-xs)', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: 3 }}>
+                                                                        {c.despues || '(vacío)'}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </td>
                                     <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontFamily: 'monospace' }}>
                                         {log.ip}
                                     </td>

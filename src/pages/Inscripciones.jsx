@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     SECTORES, ESTADOS_CURSO, DEMO_USERS, ROLES
 } from '../data/mockData';
-import { getInternos, getCursos, saveInternos, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados } from '../data/dataService';
+import { getInternos, getCursos, saveInternos, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados, addAuditLog } from '../data/dataService';
 import {
     Search, Plus, ClipboardList, Eye, Edit, XCircle, User, Award, CheckCircle2, Clock
 } from 'lucide-react';
@@ -82,6 +82,12 @@ export default function Inscripciones() {
         );
         setInscripcionesList(updatedList);
         saveInscripciones(updatedList);
+        const interno = INTERNOS.find(i => i.numero_interno === insc.interno_nro);
+        const curso = CURSOS.find(c => c.id === insc.curso_id);
+        addAuditLog(user, 'EDITAR_INSCRIPCION', 'Inscripcion',
+            `Cambió calificación de ${interno?.nombre_completo || insc.interno_nro} en "${curso?.nombre || insc.curso_id}"`,
+            [{ campo: 'calificacion', antes: prevCalif, despues: newCalif }]
+        );
         if (newCalif === 'aprobado' && prevCalif !== 'aprobado') {
             createCertificadoPendiente(inscId);
             setCertificadosList(getCertificados());
