@@ -17,7 +17,7 @@ function setupWatcher(folderPath) {
     if (!fs.existsSync(folderPath)) return
     const recentlySent = new Set()
     fileWatcher = fs.watch(folderPath, (eventType, filename) => {
-      if (!filename || !/\.(xlsx|xls)$/i.test(filename)) return
+      if (!filename || !/\.(xlsx|xls|json)$/i.test(filename)) return
       const fullPath = path.join(folderPath, filename)
       if (recentlySent.has(fullPath)) return
       recentlySent.add(fullPath)
@@ -26,7 +26,9 @@ function setupWatcher(folderPath) {
       setTimeout(() => {
         try {
           if (mainWindow && fs.existsSync(fullPath) && fs.statSync(fullPath).size > 0) {
-            mainWindow.webContents.send('watch:newExcel', fullPath, filename)
+            const isJson = /\.json$/i.test(filename)
+            const event = isJson ? 'watch:newSectorJson' : 'watch:newExcel'
+            mainWindow.webContents.send(event, fullPath, filename)
           }
         } catch (_) {}
       }, 2000)
@@ -87,6 +89,23 @@ function createWindow() {
   }
 }
 
+function startReporteScheduler() {
+  // Chequea cada minuto si es viernes >= 13hs y no se notificó hoy
+  const check = () => {
+    try {
+      const now = new Date()
+      if (now.getDay() !== 5 || now.getHours() < 13) return // solo viernes tarde
+      const hoy = now.toISOString().slice(0, 10) // YYYY-MM-DD
+      const ultima = db.config.get('ultimo_aviso_reporte') || ''
+      if (ultima === hoy) return // ya se notificó hoy
+      db.config.set('ultimo_aviso_reporte', hoy)
+      if (mainWindow) mainWindow.webContents.send('sector:reporteReady')
+    } catch (_) {}
+  }
+  check() // chequear al iniciar también (por si la app abrió tarde el viernes)
+  setInterval(check, 60000)
+}
+
 app.whenReady().then(() => {
   initDatabase()
   registerIpcHandlers()
@@ -98,6 +117,8 @@ app.whenReady().then(() => {
     const savedFolder = db.config.get('watched_folder')
     if (savedFolder) setupWatcher(savedFolder)
   } catch (_) {}
+
+  startReporteScheduler()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

@@ -25,6 +25,13 @@ export default function ImportarExcel() {
     // ── Carpeta vigilada (solo Electron) ───────────────────────────────────────
     const [watchedFolder, setWatchedFolder] = useState('');
     const [newExcelNotif, setNewExcelNotif] = useState(null); // { filePath, filename }
+    const [sectorToasts, setSectorToasts] = useState([]); // [{ id, msg, error }]
+
+    const addSectorToast = (msg, error = false) => {
+        const id = Date.now();
+        setSectorToasts(prev => [...prev, { id, msg, error }]);
+        setTimeout(() => setSectorToasts(prev => prev.filter(t => t.id !== id)), 6000);
+    };
 
     useEffect(() => {
         if (!IS_ELECTRON) return;
@@ -32,6 +39,25 @@ export default function ImportarExcel() {
         window.electronAPI.watchFolder.onNewExcel((filePath, filename) => {
             setNewExcelNotif({ filePath, filename });
             setActiveTab('excel');
+        });
+        window.electronAPI.watchFolder.onNewSectorJson(async (filePath, filename) => {
+            try {
+                const arrayBuffer = await window.electronAPI.watchFolder.readFile(filePath);
+                const text = new TextDecoder().decode(new Uint8Array(arrayBuffer));
+                const payload = JSON.parse(text);
+                if (payload.tipo !== 'exportacion_sector') {
+                    addSectorToast(`${filename}: no es un archivo de sector válido.`, true);
+                    return;
+                }
+                const res = importSectorData(payload);
+                addSectorToast(
+                    `Sector ${res.sector_nombre} importado automáticamente — ${res.inscripciones_nuevas} nuevas, ${res.inscripciones_actualizadas} actualizadas.`
+                );
+                addAuditLog(user, 'IMPORTAR_SECTOR_AUTO', 'Sector',
+                    `Importación automática ${filename}: ${res.inscripciones_nuevas} inscripciones nuevas, ${res.inscripciones_actualizadas} actualizadas`);
+            } catch (err) {
+                addSectorToast(`Error al importar ${filename}: ${err.message}`, true);
+            }
         });
         return () => window.electronAPI.watchFolder.removeListener();
     }, []);
@@ -741,6 +767,24 @@ export default function ImportarExcel() {
                 </div>
             </div>
             </>)}
+
+            {/* Toasts de auto-import de sectores */}
+            {sectorToasts.length > 0 && (
+                <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 600, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {sectorToasts.map(t => (
+                        <div key={t.id} style={{
+                            background: t.error ? '#7f1d1d' : '#166534', color: '#fff',
+                            padding: '12px 20px', borderRadius: 8,
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            fontSize: 'var(--text-sm)', maxWidth: 420, animation: 'fadeIn 0.2s ease'
+                        }}>
+                            <Building2 size={16} style={{ flexShrink: 0 }} />
+                            {t.msg}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

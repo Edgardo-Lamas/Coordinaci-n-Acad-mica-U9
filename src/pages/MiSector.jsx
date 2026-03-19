@@ -3,7 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
 import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog, addCorrectionRequest } from '../data/dataService';
 import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Download, Upload, Flag } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const IS_ELECTRON = typeof window !== 'undefined' && window.electronAPI?.isElectron === true;
 
 export default function MiSector() {
     const INTERNOS = getInternos();
@@ -17,6 +19,13 @@ export default function MiSector() {
     const [newInsc, setNewInsc] = useState({ nombre: '', dni: '', whatsapp: '', curso_id: '' });
     const [flagModal, setFlagModal] = useState(null); // { insc, motivo }
     const [flagEnviada, setFlagEnviada] = useState(null); // id de inscripción con bandera enviada
+    const [reporteListo, setReporteListo] = useState(false);
+
+    useEffect(() => {
+        if (!IS_ELECTRON) return;
+        window.electronAPI.sector.onReporteReady(() => setReporteListo(true));
+        return () => window.electronAPI.sector.removeReporteListener();
+    }, []);
 
     const sector = SECTORES.find(s => s.id === user.sector_id);
     const sectorInternos = INTERNOS.filter(i => i.sector_actual === user.sector_id && i.estado === 'activo');
@@ -196,13 +205,35 @@ Sistema de Gestión Académica - Unidad 9 La Plata
                     </p>
                 </div>
                 <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={handleExportar}
+                    className={`btn btn-sm ${reporteListo ? 'btn-warning' : 'btn-secondary'}`}
+                    onClick={() => { handleExportar(); setReporteListo(false); }}
                     title="Exportar datos del sector para enviar a Coordinación"
                 >
                     <Upload size={16} /> Exportar sector
                 </button>
             </div>
+
+            {reporteListo && (
+                <div style={{
+                    background: 'var(--warning, #d97706)', color: '#fff',
+                    borderRadius: 8, padding: '12px 20px', marginBottom: 'var(--space-4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                    boxShadow: '0 2px 8px rgba(217,119,6,0.3)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 600 }}>
+                        <Upload size={18} />
+                        Reporte semanal listo — exportá los datos y envialos a Coordinación
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-sm" style={{ background: '#fff', color: '#d97706', fontWeight: 700 }}
+                            onClick={() => { handleExportar(); setReporteListo(false); }}>
+                            Exportar ahora
+                        </button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: '#fff' }}
+                            onClick={() => setReporteListo(false)}>✕</button>
+                    </div>
+                </div>
+            )}
 
             <div className="stats-grid">
                 <div className="stat-card">

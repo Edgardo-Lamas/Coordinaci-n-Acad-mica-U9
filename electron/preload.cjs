@@ -21,6 +21,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openDialog: () => ipcRenderer.invoke('watch:openDialog'),
     readFile: (filePath) => ipcRenderer.invoke('watch:readFile', filePath),
     onNewExcel: (callback) => ipcRenderer.on('watch:newExcel', (_e, filePath, filename) => callback(filePath, filename)),
-    removeListener: () => ipcRenderer.removeAllListeners('watch:newExcel'),
+    onNewSectorJson: (callback) => ipcRenderer.on('watch:newSectorJson', (_e, filePath, filename) => callback(filePath, filename)),
+    removeListener: () => {
+      ipcRenderer.removeAllListeners('watch:newExcel')
+      ipcRenderer.removeAllListeners('watch:newSectorJson')
+    },
+  },
+
+  sector: {
+    onReporteReady: (callback) => ipcRenderer.on('sector:reporteReady', () => callback()),
+    removeReporteListener: () => ipcRenderer.removeAllListeners('sector:reporteReady'),
   },
 })
