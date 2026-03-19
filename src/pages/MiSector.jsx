@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SECTORES, ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES, DEMO_USERS } from '../data/mockData';
 import { getInternos, getCursos, getCapacitadores, saveInternos, getInscripciones, saveInscripciones, exportSectorData, addAuditLog, addCorrectionRequest } from '../data/dataService';
+import { useCicloLectivo } from '../contexts/CicloLectivoContext';
 import { Users, BookOpen, Building2, Eye, ClipboardList, Plus, XCircle, Download, Upload, Flag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -12,6 +13,7 @@ export default function MiSector() {
     const CURSOS = getCursos();
     const CAPACITADORES = getCapacitadores();
     const { user } = useAuth();
+    const { cicloActivo, CURRENT_YEAR } = useCicloLectivo();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('internos');
     const [showFormInscripcion, setShowFormInscripcion] = useState(false);
@@ -29,11 +31,14 @@ export default function MiSector() {
 
     const sector = SECTORES.find(s => s.id === user.sector_id);
     const sectorInternos = INTERNOS.filter(i => i.sector_actual === user.sector_id && i.estado === 'activo');
-    const sectorCursos = CURSOS.filter(c => c.sector_id === user.sector_id);
+    const sectorCursos = CURSOS.filter(c => {
+        if (c.sector_id !== user.sector_id) return false;
+        return c.fecha_inicio ? c.fecha_inicio.startsWith(cicloActivo) : cicloActivo === CURRENT_YEAR;
+    });
     const sectorInscripciones = inscripcionesList.filter(i => {
-        if (i.sector_id != null) return i.sector_id === user.sector_id;
-        const curso = CURSOS.find(c => c.id === i.curso_id);
-        return curso?.sector_id === user.sector_id;
+        const matchSector = i.sector_id != null ? i.sector_id === user.sector_id : CURSOS.find(c => c.id === i.curso_id)?.sector_id === user.sector_id;
+        const matchCiclo = i.fecha_inicio_curso ? i.fecha_inicio_curso.startsWith(cicloActivo) : cicloActivo === CURRENT_YEAR;
+        return matchSector && matchCiclo;
     });
 
     const cursosDisponibles = sectorCursos.filter(c =>

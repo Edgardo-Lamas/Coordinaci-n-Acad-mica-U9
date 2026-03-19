@@ -5,6 +5,7 @@ import {
     SECTORES, ESTADOS_CURSO, DEMO_USERS, ROLES
 } from '../data/mockData';
 import { getInternos, getCursos, saveInternos, getInscripciones, saveInscripciones, createCertificadoPendiente, getCertificados, addAuditLog } from '../data/dataService';
+import { useCicloLectivo } from '../contexts/CicloLectivoContext';
 import {
     Search, Plus, ClipboardList, Eye, Edit, XCircle, User, Award, CheckCircle2, Clock
 } from 'lucide-react';
@@ -14,6 +15,7 @@ export default function Inscripciones() {
     const INTERNOS = getInternos();
     const CURSOS = getCursos();
     const { user, isResponsable, isCoordinacion, isAdmin, isCargador } = useAuth();
+    const { cicloActivo, CURRENT_YEAR } = useCicloLectivo();
     const navigate = useNavigate();
     const [search, setSearch] = useState('');
     const [filterCalificacion, setFilterCalificacion] = useState('');
@@ -70,7 +72,8 @@ export default function Inscripciones() {
         }
         // Admin y coordinación ven todo
 
-        return matchSearch && matchCalif && matchSector && hasAccess;
+        const matchCiclo = insc.fecha_inicio_curso ? insc.fecha_inicio_curso.startsWith(cicloActivo) : cicloActivo === CURRENT_YEAR;
+        return matchSearch && matchCalif && matchSector && hasAccess && matchCiclo;
     });
 
     const handleCalifChange = (inscId, newCalif) => {

@@ -1,5 +1,6 @@
 import { HashRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { CicloLectivoProvider } from './contexts/CicloLectivoContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -23,6 +24,7 @@ import { ROLES } from './data/mockData';
 function App() {
   return (
     <AuthProvider>
+      <CicloLectivoProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -88,6 +90,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </CicloLectivoProvider>
     </AuthProvider>
   );
 }

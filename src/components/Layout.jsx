@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCicloLectivo } from '../contexts/CicloLectivoContext';
 import { ROLES } from '../data/mockData';
 import { getCorrectionRequests } from '../data/dataService';
 import {
     LayoutDashboard, Users, Building2, BookOpen, ClipboardList,
     Award, Shield, Settings, LogOut, Menu, X, GraduationCap,
-    FileSpreadsheet, BarChart2, ArrowLeft, AlertCircle
+    FileSpreadsheet, BarChart2, ArrowLeft, AlertCircle, Calendar
 } from 'lucide-react';
 import GlobalSearch from './GlobalSearch';
 
@@ -51,9 +52,11 @@ const NAV_CONFIG = [
 
 export default function Layout() {
     const { user, logout } = useAuth();
+    const { cicloActivo, setCicloActivo, getCiclosDisponibles } = useCicloLectivo();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const ciclos = getCiclosDisponibles();
 
     const pendingCorrections = getCorrectionRequests().filter(r => r.estado === 'pendiente').length;
 
@@ -175,6 +178,27 @@ export default function Layout() {
                     </div>
                     <GlobalSearch />
                     <div className="header-right">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Calendar size={14} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                            <select
+                                value={cicloActivo}
+                                onChange={e => setCicloActivo(e.target.value)}
+                                style={{
+                                    background: 'rgba(255,255,255,0.15)',
+                                    border: '1px solid rgba(255,255,255,0.25)',
+                                    borderRadius: 6,
+                                    color: 'white',
+                                    padding: '3px 8px',
+                                    fontSize: 'var(--text-sm)',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                {ciclos.map(y => (
+                                    <option key={y} value={y} style={{ background: '#1e40af', color: 'white' }}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
                         {user?.sectorNombre && (
                             <span className="badge badge-info">{user.sectorNombre}</span>
                         )}

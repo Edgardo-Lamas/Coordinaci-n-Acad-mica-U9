@@ -5,6 +5,7 @@ import {
     ESTADOS_CURSO, ESTADOS_CURSO_LABELS, ESTADOS_CURSO_BADGES
 } from '../data/mockData';
 import { getCursos, saveCursos, getCapacitadores, addCapacitador, getInscripciones, addAuditLog, computeDiff } from '../data/dataService';
+import { useCicloLectivo } from '../contexts/CicloLectivoContext';
 import {
     Plus, Search, BookOpen, CheckCircle, XCircle, Play, RotateCcw, UserPlus, Pencil, Trash2, Download
 } from 'lucide-react';
@@ -12,6 +13,7 @@ import { exportCursos } from '../utils/exportExcel';
 
 export default function Cursos() {
     const { user, isAdmin, isCoordinacion, isResponsable } = useAuth();
+    const { cicloActivo, CURRENT_YEAR } = useCicloLectivo();
     const [search, setSearch] = useState('');
     const [filterEstado, setFilterEstado] = useState('');
     const [filterTipo, setFilterTipo] = useState('');
@@ -33,7 +35,8 @@ export default function Cursos() {
         const matchEstado = !filterEstado || c.estado === filterEstado;
         const matchTipo = !filterTipo || c.tipo === filterTipo;
         const matchSector = isResponsable() ? c.sector_id === user.sector_id : true;
-        return matchSearch && matchEstado && matchTipo && matchSector;
+        const matchCiclo = c.fecha_inicio ? c.fecha_inicio.startsWith(cicloActivo) : cicloActivo === CURRENT_YEAR;
+        return matchSearch && matchEstado && matchTipo && matchSector && matchCiclo;
     });
 
     const handleAction = (cursoId, action) => {

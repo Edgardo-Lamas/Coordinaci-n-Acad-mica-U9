@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useCicloLectivo } from '../contexts/CicloLectivoContext';
 import { SECTORES } from '../data/mockData';
 import {
     getCertificados, emitirCertificados,
@@ -12,6 +13,7 @@ import { exportCertificados } from '../utils/exportExcel';
 
 export default function Certificados() {
     const { user, isAdmin, isCoordinacion } = useAuth();
+    const { cicloActivo, CURRENT_YEAR } = useCicloLectivo();
     const canEmit = isAdmin() || isCoordinacion();
 
     const [certificados, setCertificados] = useState(() => getCertificados());
@@ -35,7 +37,9 @@ export default function Certificados() {
         return { ...cert, inscripcion, curso, interno, sector, capacitador };
     };
 
-    const enriched = certificados.map(enrichCert);
+    const enriched = certificados.map(enrichCert).filter(c =>
+        c.curso?.fecha_inicio ? c.curso.fecha_inicio.startsWith(cicloActivo) : cicloActivo === CURRENT_YEAR
+    );
     const pendientes = enriched.filter(c => c.estado === 'pendiente');
     const emitidos = enriched.filter(c => c.estado === 'emitido');
 
