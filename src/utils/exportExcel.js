@@ -41,6 +41,34 @@ export function exportCursos(cursos, capacitadores, sectores, inscripciones) {
     XLSX.writeFile(wb, `cursos_${today()}.xlsx`);
 }
 
+export function exportAuditoria(logs) {
+    const rows = logs.map(log => {
+        let descripcion = log.detalle;
+        let cambios = '';
+        try {
+            const parsed = JSON.parse(log.detalle);
+            if (parsed.descripcion) {
+                descripcion = parsed.descripcion;
+                cambios = (parsed.cambios || []).map(c => `${c.campo}: ${c.antes || '(vacío)'} → ${c.despues || '(vacío)'}`).join(' | ');
+            }
+        } catch {}
+        return {
+            'Fecha': new Date(log.fecha).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            'Usuario': log.usuario_nombre || '',
+            'Acción': log.accion,
+            'Entidad': log.entidad,
+            'Detalle': descripcion,
+            'Cambios': cambios,
+            'IP': log.ip || '',
+        };
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{ wch: 18 }, { wch: 20 }, { wch: 22 }, { wch: 14 }, { wch: 50 }, { wch: 40 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Auditoría');
+    XLSX.writeFile(wb, `auditoria_${today()}.xlsx`);
+}
+
 export function exportCertificados(certificados, internos, cursos, inscripciones, sectores) {
     const rows = certificados.map(cert => {
         const insc = inscripciones.find(i => i.id === cert.inscripcion_id);

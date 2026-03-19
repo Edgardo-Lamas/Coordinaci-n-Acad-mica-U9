@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { getAuditLog } from '../data/dataService';
-import { Shield, Search } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { exportAuditoria } from '../utils/exportExcel';
+import { Shield, Search, Download } from 'lucide-react';
 
 const CAMPO_LABELS = {
     calificacion: 'Calificación', observaciones: 'Observaciones', nombre: 'Nombre',
@@ -24,6 +26,7 @@ function detalleTextoPlano(detalle) {
 }
 
 export default function Auditoria() {
+    const { isAdmin, isCoordinacion } = useAuth();
     const [search, setSearch] = useState('');
     const [filterAccion, setFilterAccion] = useState('');
 
@@ -105,6 +108,11 @@ export default function Auditoria() {
                         <option value="">Todas las acciones</option>
                         {acciones.map(a => <option key={a} value={a}>{a}</option>)}
                     </select>
+                    {(isAdmin() || isCoordinacion()) && (
+                        <button className="btn btn-secondary" onClick={() => exportAuditoria(filtered)}>
+                            <Download size={16} /> Exportar Excel
+                        </button>
+                    )}
                 </div>
             </div>
 
