@@ -68,7 +68,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="correcciones" element={
-              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.COORDINACION, ROLES.RESPONSABLE, ROLES.JEFE]}>
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.COORDINACION, ROLES.JEFE]}>
                 <Correcciones />
               </ProtectedRoute>
             } />

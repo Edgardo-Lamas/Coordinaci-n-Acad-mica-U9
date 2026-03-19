@@ -22,6 +22,7 @@ export default function MiSector() {
     const sectorInternos = INTERNOS.filter(i => i.sector_actual === user.sector_id && i.estado === 'activo');
     const sectorCursos = CURSOS.filter(c => c.sector_id === user.sector_id);
     const sectorInscripciones = inscripcionesList.filter(i => {
+        if (i.sector_id != null) return i.sector_id === user.sector_id;
         const curso = CURSOS.find(c => c.id === i.curso_id);
         return curso?.sector_id === user.sector_id;
     });
@@ -65,6 +66,7 @@ export default function MiSector() {
             id: inscripcionesList.length + 1,
             interno_nro: nroRef,
             curso_id: cursoId,
+            sector_id: user.sector_id,
             calificacion: 'en_curso',
             observaciones: '',
             fecha_inscripcion: new Date().toISOString().split('T')[0],

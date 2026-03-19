@@ -41,7 +41,7 @@ const NAV_CONFIG = [
     {
         section: 'ADMINISTRACIÓN',
         items: [
-            { path: '/correcciones', label: 'Correcciones', icon: AlertCircle, roles: [ROLES.ADMIN, ROLES.COORDINACION, ROLES.RESPONSABLE, ROLES.JEFE], badge: true },
+            { path: '/correcciones', label: 'Correcciones', icon: AlertCircle, roles: [ROLES.ADMIN, ROLES.COORDINACION, ROLES.JEFE], badge: true },
             { path: '/importar', label: 'Importar Excel', icon: FileSpreadsheet, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
             { path: '/auditoria', label: 'Auditoría', icon: Shield, roles: [ROLES.ADMIN, ROLES.COORDINACION] },
             { path: '/configuracion', label: 'Configuración', icon: Settings, roles: [ROLES.ADMIN] },

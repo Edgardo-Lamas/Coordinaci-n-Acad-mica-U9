@@ -661,11 +661,12 @@ export function importSectorData(payload) {
     const existingInscr = getInscripciones()
     const updatedInscr = [...existingInscr]
     for (const insc of (payload.inscripciones || [])) {
+        const withSector = { ...insc, sector_id: payload.sector_id }
         const idx = updatedInscr.findIndex(e => e.id === insc.id)
         if (idx >= 0) {
-            updatedInscr[idx] = { ...updatedInscr[idx], ...insc }
+            updatedInscr[idx] = { ...updatedInscr[idx], ...withSector }
         } else {
-            updatedInscr.push(insc)
+            updatedInscr.push(withSector)
             inscripcionesNuevas++
         }
     }
