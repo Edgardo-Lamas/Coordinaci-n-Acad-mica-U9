@@ -1,46 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { GraduationCap, AlertCircle, Eye, EyeOff, Building2, GraduationCap as CoordIcon, Shield, Settings } from 'lucide-react';
-
-const DEMO_ACCOUNTS = [
-    {
-        label: 'Administrador',
-        desc: 'Gestión de usuarios y configuración',
-        email: 'admin@sistema.gob.ar',
-        password: 'admin123',
-        icon: Settings,
-        color: '#dc2626',
-        badge: 'Admin'
-    },
-    {
-        label: 'Jefatura del Penal',
-        desc: 'Vista general — solo lectura',
-        email: 'jefe@u9.gob.ar',
-        password: 'jefe2025',
-        icon: Shield,
-        color: '#7c3aed',
-        badge: 'Vista completa'
-    },
-    {
-        label: 'Coordinación Académica',
-        desc: 'Gestión completa del sistema',
-        email: 'coord1@sistema.gob.ar',
-        password: 'coord123',
-        icon: CoordIcon,
-        color: '#0ea5e9',
-        badge: 'Acceso total'
-    },
-    {
-        label: 'Responsable de Sector',
-        desc: 'Solo sector AGORA',
-        email: 'resp.agora@sistema.gob.ar',
-        password: 'resp123',
-        icon: Building2,
-        color: '#10b981',
-        badge: 'Acceso sectorial'
-    },
-];
+import { GraduationCap, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -48,7 +9,6 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [loadingAccount, setLoadingAccount] = useState(null);
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -63,19 +23,6 @@ export default function Login() {
             setError(err.message);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleDemoLogin = async (account) => {
-        setError('');
-        setLoadingAccount(account.email);
-        try {
-            await login(account.email, account.password);
-            navigate('/');
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoadingAccount(null);
         }
     };
 
@@ -139,69 +86,13 @@ export default function Login() {
                                 </button>
                             </div>
                         </div>
-                        <button type="submit" className="btn btn-primary" disabled={loading || !!loadingAccount}>
+                        <button type="submit" className="btn btn-primary" disabled={loading}>
                             {loading ? (
                                 <><div className="spinner" style={{ width: 18, height: 18, borderWidth: '2px' }} /> Ingresando...</>
                             ) : 'Iniciar Sesión'}
                         </button>
                     </form>
 
-                    {/* Accesos rápidos — etapa de prueba */}
-                    {<div className="login-demo">
-                        <div className="login-demo-title">Accesos de demostración</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {DEMO_ACCOUNTS.map(account => {
-                                const Icon = account.icon;
-                                const isThisLoading = loadingAccount === account.email;
-                                return (
-                                    <button
-                                        key={account.email}
-                                        onClick={() => handleDemoLogin(account)}
-                                        disabled={loading || !!loadingAccount}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: 14,
-                                            padding: '12px 16px', borderRadius: 10,
-                                            border: `1.5px solid ${account.color}22`,
-                                            background: `${account.color}08`,
-                                            cursor: loading || loadingAccount ? 'not-allowed' : 'pointer',
-                                            opacity: (loading || (loadingAccount && !isThisLoading)) ? 0.5 : 1,
-                                            transition: 'all 0.15s',
-                                            textAlign: 'left', width: '100%',
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                                            background: `${account.color}18`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}>
-                                            {isThisLoading
-                                                ? <div className="spinner" style={{ width: 18, height: 18, borderWidth: '2px', borderColor: `${account.color}40`, borderTopColor: account.color }} />
-                                                : <Icon size={20} color={account.color} />
-                                            }
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--gray-800)', lineHeight: 1.3 }}>
-                                                {account.label}
-                                            </div>
-                                            <div style={{ fontSize: 12, color: 'var(--gray-400)', marginTop: 1 }}>
-                                                {account.desc}
-                                            </div>
-                                        </div>
-                                        <span style={{
-                                            fontSize: 11, fontWeight: 600, padding: '3px 8px',
-                                            borderRadius: 20, background: `${account.color}18`,
-                                            color: account.color, whiteSpace: 'nowrap', flexShrink: 0
-                                        }}>
-                                            {account.badge}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <div style={{ marginTop: 12, fontSize: 11, color: 'var(--gray-400)', textAlign: 'center' }}>
-                            Etapa de prueba — accesos directos
-                        </div>
-                    </div>}
                 </div>
             </div>
         </div>
