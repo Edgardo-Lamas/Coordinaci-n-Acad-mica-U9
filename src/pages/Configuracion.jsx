@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES, ROLE_LABELS, SECTORES } from '../data/mockData';
 import { getUsuarios, saveUsuarios, saveInternos, saveCursos, saveInscripciones, saveCertificados, saveCorrectionRequests } from '../data/dataService';
-import { Settings, Plus, Pencil, UserX, UserCheck, X, User, Eye, EyeOff, Trash2, AlertTriangle } from 'lucide-react';
+import { Settings, Plus, Pencil, UserX, UserCheck, X, User, Eye, EyeOff, Trash2, AlertTriangle, Info, Mail, Code2 } from 'lucide-react';
 
 const ROLE_BADGE = {
     [ROLES.ADMIN]: 'badge-danger',
@@ -403,6 +403,46 @@ export default function Configuracion() {
                     </div>
                 </div>
             )}
+
+            {/* Acerca del sistema */}
+            <div className="card" style={{ marginTop: 'var(--space-6)' }}>
+                <div className="card-header">
+                    <h2 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Info size={18} /> Acerca del sistema
+                    </h2>
+                </div>
+                <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
+                        <div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Sistema</div>
+                            <div style={{ fontWeight: 700, fontSize: 'var(--text-lg)', color: 'var(--gray-800)' }}>Gestión Académica U9</div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: 2 }}>Versión 1.0.0 · 2026</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Institución</div>
+                            <div style={{ fontWeight: 500, fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}>Unidad Penitenciaria N° 9 — La Plata</div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>Servicio Penitenciario Bonaerense</div>
+                        </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid var(--gray-100)', paddingTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
+                        <div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Desarrollo</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Code2 size={14} style={{ color: 'var(--primary-400)' }} />
+                                <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}>Lamas Studio</span>
+                            </div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', marginTop: 1 }}>Edgardo Lamas · Desarrollador Freelance</div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Contacto</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Mail size={14} style={{ color: 'var(--primary-400)' }} />
+                                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-600)', fontFamily: 'monospace' }}>edgardolamas2000@gmail.com</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {/* Zona de riesgo */}
             <div className="card" style={{ marginTop: 'var(--space-6)', borderColor: 'var(--danger, #dc2626)' }}>
