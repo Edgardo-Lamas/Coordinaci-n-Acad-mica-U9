@@ -1,0 +1,18 @@
+{
+  "name": "gea9-servidor",
+  "version": "1.0.0",
+  "description": "Servidor central GEA9 — Gestión Académica Unidad 9",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "engines": {
+    "node": ">=18 <=22"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.3"
+  }
+}
